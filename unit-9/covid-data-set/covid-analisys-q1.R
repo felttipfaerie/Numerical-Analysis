@@ -12,7 +12,6 @@ Covid19_India_Jan_20_Mar_20_ <- read_csv("Covid19 India (Jan 20 - Mar 20).csv")
 View(Covid19_India_Jan_20_Mar_20_)
 
 df <- Covid19_India_Jan_20_Mar_20_
-table(df$variable1, df$variable2)
 
 #find all teratories
 unique(df$`State/UnionTerritory`)
