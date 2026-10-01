@@ -1,3 +1,5 @@
+# Coding-assistant note: OpenAI Codex assisted with coding. The project owner made the key decisions on how to segment and manage the data.
+# Dataset note: Uses R's built-in airquality dataset, supplied by the datasets package and loaded below with data(airquality); no external file is required. Documentation: https://search.r-project.org/R/refmans/datasets/html/airquality.html
 library(fitdistrplus)
 
 ## Load the built-in ‘airquality’ dataset

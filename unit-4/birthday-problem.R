@@ -1,3 +1,4 @@
+# Coding-assistant note: OpenAI Codex assisted with coding. The project owner made the key decisions on how to segment and manage the data.
 y <- 365 # years
 n <- 20 # number of people
 p <- 0 # probability increasing

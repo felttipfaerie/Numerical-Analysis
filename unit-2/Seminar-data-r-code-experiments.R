@@ -1,3 +1,5 @@
+# Coding-assistant note: OpenAI Codex assisted with coding. The project owner made the key decisions on how to segment and manage the data.
+# Dataset note: Uses the sample values defined directly in this script; no external data file is required.
 # Sample dataset
 x <- c(12, 18, 19, 21, 22, 23, 24, 25, 26, 27, 3, 28, 29, 29, 30, 31, 32, 33, 34, 35, 36)
 

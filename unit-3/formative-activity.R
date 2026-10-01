@@ -1,3 +1,5 @@
+# Coding-assistant note: OpenAI Codex assisted with coding. The project owner made the key decisions on how to segment and manage the data.
+# Dataset note: Uses the COVID-19 India (Jan 20 - Mar 20) CSV at unit-2/covid-data-set/Covid19 India (Jan 20 - Mar 20).csv in this repository. Public COVID-19 India CSV archive: https://data.covid19india.org/documentation/csv/
 library(readr)
 Covid19_India_Jan_20_Mar_20_ <- read_csv("unit-2/covid-data-set/Covid19 India (Jan 20 - Mar 20).csv")
 View(Covid19_India_Jan_20_Mar_20_)

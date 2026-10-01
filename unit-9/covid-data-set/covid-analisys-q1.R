@@ -1,3 +1,5 @@
+# Coding-assistant note: OpenAI Codex assisted with coding. The project owner made the key decisions on how to segment and manage the data.
+# Dataset note: Uses the COVID-19 India CSV and India boundary shapefile in unit-9/covid-data-set/. Keep the .csv, .shp, .dbf, .prj, .shx, and .cpg files together. Public COVID-19 India CSV archive: https://data.covid19india.org/documentation/csv/; public replacement boundary data: https://gadm.org/download_country.html
 library(readr)
 library(dplyr)
 library(tidyr)

@@ -1,3 +1,4 @@
+# Coding-assistant note: OpenAI Codex assisted with coding. The project owner made the key decisions on how to segment and manage the data.
 age <- c(41, 38, 73, 29)
 height <- c(178, 163, 159, 181)
 weight <- c(82,78,59,92)

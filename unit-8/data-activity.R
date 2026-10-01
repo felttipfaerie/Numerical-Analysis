@@ -1,3 +1,5 @@
+# Coding-assistant note: OpenAI Codex assisted with coding. The project owner made the key decisions on how to segment and manage the data.
+# Dataset note: Uses the vendor score data at unit-8/data-activity.csv in this repository. The project does not record a public download source for this file.
 # Anova highlighted a statistically significant variance between the groups.
 # Further investigation showed that there was no conclusive evidence for which vendor shows a higher significance of improvement.
 # However, Vedor 3 deminstrated a significantly worse improvment in comparison to the other venders at a 95% confidence level.

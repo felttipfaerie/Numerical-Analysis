@@ -1,3 +1,5 @@
+# Coding-assistant note: OpenAI Codex assisted with coding. The project owner made the key decisions on how to segment and manage the data.
+# Dataset note: Uses the Health Data SPSS dataset. It is intentionally excluded from Git; obtain it from the project owner and place it at unit-8/Health Data.sav. The project does not record a public download source for this file.
 library(haven)
 Health_Data <- read_sav("Health Data.sav")
 View(Health_Data)

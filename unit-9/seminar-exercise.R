@@ -1,3 +1,5 @@
+# Coding-assistant note: OpenAI Codex assisted with coding. The project owner made the key decisions on how to segment and manage the data.
+# Dataset note: Uses CSEW 2013-14 SPSS microdata (UK Data Service study 7619). It is intentionally excluded from Git; obtain it from the UK Data Service or project owner and place it at unit-9/UKDA-7619-spss/spss/spss25/csew_apr13mar14_nvf.sav. Public study documentation: https://doc.ukdataservice.ac.uk/doc/7619/mrdoc/UKDA/UKDA_Study_7619_Information.htm; data access may require UK Data Service registration.
 library(haven)
 csew_apr13mar14_nvf <- read_sav("UKDA-7619-spss/spss/spss25/csew_apr13mar14_nvf.sav")
 df <- csew_apr13mar14_nvf

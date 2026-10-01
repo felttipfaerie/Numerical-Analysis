@@ -1,3 +1,4 @@
+# Coding-assistant note: OpenAI Codex assisted with coding. The project owner made the key decisions on how to segment and manage the data.
 #ata set
 x <- c(3, 5, 1, 3, 7, 6, 7, 4, 2) # creating a variable
 
