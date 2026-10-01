@@ -1,0 +1,1339 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Numerical Analysis Practice</title>
+  <style>
+    :root {
+      --font-family-main: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-family-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+
+      --text-size-root: clamp(15px, 0.92rem + 0.25vw, 18px);
+      --text-size-small: 0.86rem;
+      --text-size-body: 1rem;
+      --text-size-label: 0.78rem;
+      --text-size-title: clamp(1.65rem, 1.2rem + 2.4vw, 3rem);
+      --text-size-heading: clamp(1.12rem, 1rem + 0.8vw, 1.6rem);
+      --text-size-question: clamp(1.04rem, 0.96rem + 0.6vw, 1.35rem);
+      --line-height-tight: 1.12;
+      --line-height-body: 1.55;
+      --letter-spacing-label: 0;
+      --font-weight-regular: 450;
+      --font-weight-medium: 650;
+      --font-weight-bold: 760;
+      --text-transform-label: uppercase;
+
+      --color-page: #f7f8f4;
+      --color-surface: #ffffff;
+      --color-surface-soft: #eef5ee;
+      --color-ink: #17211d;
+      --color-muted: #5d6d66;
+      --color-border: #cfd9d1;
+      --color-primary: #176f67;
+      --color-primary-strong: #0e4f4b;
+      --color-accent: #b95c2f;
+      --color-correct: #0f7a45;
+      --color-focus: #2d7ff0;
+      --color-feedback: #fff9ec;
+      --color-incorrect: #b3362d;
+      --color-correct-soft: #edf8f1;
+      --color-incorrect-soft: #fff0ee;
+      --shadow-soft: 0 1rem 2.5rem rgba(23, 33, 29, 0.12);
+
+      --space-1: 0.35rem;
+      --space-2: 0.55rem;
+      --space-3: 0.8rem;
+      --space-4: 1rem;
+      --space-5: 1.35rem;
+      --space-6: 1.8rem;
+      --space-7: 2.4rem;
+      --radius-box: 0.5rem;
+      --radius-control: 0.42rem;
+      --border-width: 1px;
+      --max-width-app: 72rem;
+      --control-min-height: 2.75rem;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      font-family: var(--font-family-main);
+      font-size: var(--text-size-root);
+      color: var(--color-ink);
+      background: var(--color-page);
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      font-size: var(--text-size-body);
+      font-weight: var(--font-weight-regular);
+      line-height: var(--line-height-body);
+    }
+
+    button,
+    textarea,
+    .field input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      min-height: var(--control-min-height);
+      border: var(--border-width) solid transparent;
+      border-radius: var(--radius-control);
+      padding: var(--space-2) var(--space-4);
+      color: var(--color-surface);
+      background: var(--color-primary);
+      font-weight: var(--font-weight-medium);
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: var(--color-primary-strong);
+    }
+
+    button:focus-visible,
+    textarea:focus-visible,
+    input:focus-visible,
+    label:has(input:focus-visible) {
+      outline: 0.2rem solid color-mix(in srgb, var(--color-focus), transparent 65%);
+      outline-offset: 0.12rem;
+    }
+
+    button.secondary {
+      color: var(--color-primary-strong);
+      background: var(--color-surface);
+      border-color: var(--color-border);
+    }
+
+    button.secondary:hover {
+      background: var(--color-surface-soft);
+    }
+
+    .app {
+      width: min(100%, var(--max-width-app));
+      min-height: 100vh;
+      margin-inline: auto;
+      padding: clamp(var(--space-4), 2.5vw, var(--space-7));
+      display: grid;
+      gap: var(--space-5);
+      align-content: start;
+    }
+
+    .topbar,
+    .workspace,
+    .setup {
+      width: 100%;
+      border: var(--border-width) solid var(--color-border);
+      border-radius: var(--radius-box);
+      background: var(--color-surface);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .topbar {
+      padding: var(--space-5);
+      display: grid;
+      gap: var(--space-4);
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: end;
+    }
+
+    .brand {
+      display: grid;
+      gap: var(--space-1);
+      min-width: 0;
+    }
+
+    .eyebrow,
+    .chip,
+    .topic-option span:first-child {
+      font-size: var(--text-size-label);
+      line-height: var(--line-height-tight);
+      letter-spacing: var(--letter-spacing-label);
+      text-transform: var(--text-transform-label);
+      font-weight: var(--font-weight-bold);
+      color: var(--color-accent);
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      font-size: var(--text-size-title);
+      line-height: var(--line-height-tight);
+      font-weight: var(--font-weight-bold);
+      overflow-wrap: anywhere;
+    }
+
+    h2 {
+      font-size: var(--text-size-heading);
+      line-height: var(--line-height-tight);
+      font-weight: var(--font-weight-bold);
+    }
+
+    .muted {
+      color: var(--color-muted);
+    }
+
+    .setup {
+      padding: var(--space-5);
+      display: grid;
+      gap: var(--space-5);
+    }
+
+    .topic-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+      gap: var(--space-3);
+    }
+
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+      gap: var(--space-3);
+      align-items: end;
+    }
+
+    .field {
+      min-width: 0;
+      display: grid;
+      gap: var(--space-2);
+    }
+
+    .field span {
+      font-size: var(--text-size-label);
+      line-height: var(--line-height-tight);
+      letter-spacing: var(--letter-spacing-label);
+      text-transform: var(--text-transform-label);
+      font-weight: var(--font-weight-bold);
+      color: var(--color-accent);
+    }
+
+    .topic-option {
+      position: relative;
+      min-width: 0;
+      min-height: 5.75rem;
+      display: grid;
+      gap: var(--space-2);
+      align-content: start;
+      padding: var(--space-4);
+      border: var(--border-width) solid var(--color-border);
+      border-radius: var(--radius-box);
+      background: var(--color-surface);
+      cursor: pointer;
+    }
+
+    .topic-option:has(input:checked) {
+      border-color: var(--color-primary);
+      background: var(--color-surface-soft);
+    }
+
+    .topic-option input {
+      position: absolute;
+      inline-size: 1px;
+      block-size: 1px;
+      opacity: 0;
+    }
+
+    .topic-option strong {
+      font-size: var(--text-size-body);
+      line-height: var(--line-height-tight);
+      overflow-wrap: anywhere;
+    }
+
+    .topic-option small {
+      color: var(--color-muted);
+      font-size: var(--text-size-small);
+      line-height: var(--line-height-body);
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-3);
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .practice-actions {
+      justify-content: flex-end;
+    }
+
+    .workspace {
+      display: none;
+      overflow: hidden;
+    }
+
+    .workspace.active {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .panel {
+      padding: var(--space-5);
+      display: grid;
+      gap: var(--space-5);
+      min-width: 0;
+    }
+
+    .question-head {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .chip {
+      display: inline-flex;
+      max-width: 100%;
+      min-height: 2rem;
+      align-items: center;
+      border-radius: 999rem;
+      padding: var(--space-1) var(--space-3);
+      color: var(--color-primary-strong);
+      background: var(--color-surface-soft);
+      overflow-wrap: anywhere;
+    }
+
+    .question {
+      font-size: var(--text-size-question);
+      line-height: var(--line-height-body);
+      font-weight: var(--font-weight-medium);
+      overflow-wrap: anywhere;
+    }
+
+    .data-box,
+    .answer-box,
+    .feedback {
+      min-width: 0;
+      border: var(--border-width) solid var(--color-border);
+      border-radius: var(--radius-box);
+      padding: var(--space-4);
+      background: var(--color-surface-soft);
+      overflow-wrap: anywhere;
+    }
+
+    .data-box {
+      font-family: var(--font-family-mono);
+      font-size: var(--text-size-small);
+      white-space: pre-wrap;
+    }
+
+    textarea,
+    .field input,
+    #answerInput,
+    #extraAnswerInput,
+    select {
+      width: 100%;
+      border: var(--border-width) solid var(--color-border);
+      border-radius: var(--radius-control);
+      padding: var(--space-4);
+      color: var(--color-ink);
+      background: var(--color-surface);
+      line-height: var(--line-height-body);
+    }
+
+    textarea {
+      min-height: 9rem;
+      resize: vertical;
+    }
+
+    .feedback {
+      display: none;
+      background: var(--color-feedback);
+    }
+
+    .feedback.visible {
+      display: grid;
+      gap: var(--space-3);
+    }
+
+    .answer-box {
+      background: var(--color-surface);
+      display: grid;
+      gap: var(--space-3);
+    }
+
+    .answer-box strong {
+      color: var(--color-correct);
+    }
+
+    .answer-row {
+      display: grid;
+      grid-template-columns: max-content minmax(8rem, 1fr);
+      gap: var(--space-3);
+      align-items: center;
+    }
+
+    .answer-row label {
+      white-space: nowrap;
+    }
+
+    #answerInput,
+    #extraAnswerInput {
+      min-height: var(--control-min-height);
+      padding-block: var(--space-2);
+    }
+
+    .check-target {
+      display: grid;
+      gap: var(--space-2);
+      color: var(--color-muted);
+      font-size: var(--text-size-small);
+    }
+
+    .choice-box {
+      display: none;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+      gap: var(--space-3);
+    }
+
+    .choice-box.visible {
+      display: grid;
+    }
+
+    .choice-option {
+      position: relative;
+      min-width: 0;
+      display: flex;
+      gap: var(--space-3);
+      align-items: flex-start;
+      border: var(--border-width) solid var(--color-border);
+      border-radius: var(--radius-control);
+      padding: var(--space-3);
+      background: var(--color-surface);
+      cursor: pointer;
+      overflow-wrap: anywhere;
+    }
+
+    .choice-option:has(input:checked) {
+      border-color: var(--color-primary);
+      background: var(--color-surface-soft);
+    }
+
+    .choice-option input {
+      flex: 0 0 auto;
+      width: 1.1rem;
+      height: 1.1rem;
+      margin-block-start: 0.25rem;
+    }
+
+    #extraAnswerInput {
+      display: none;
+    }
+
+    #extraAnswerInput.visible {
+      display: block;
+    }
+
+    #answerInput.hidden {
+      display: none;
+    }
+
+    .result {
+      display: none;
+      border: var(--border-width) solid var(--color-border);
+      border-radius: var(--radius-box);
+      padding: var(--space-4);
+      overflow-wrap: anywhere;
+    }
+
+    .result.visible {
+      display: block;
+    }
+
+    .result.correct {
+      color: var(--color-correct);
+      background: var(--color-correct-soft);
+      border-color: color-mix(in srgb, var(--color-correct), var(--color-border) 55%);
+    }
+
+    .result.correct::before {
+      content: "✓";
+      display: inline-grid;
+      width: 1.65rem;
+      height: 1.65rem;
+      margin-inline-end: var(--space-2);
+      place-items: center;
+      border-radius: 999rem;
+      color: var(--color-surface);
+      background: var(--color-correct);
+      font-weight: var(--font-weight-bold);
+      line-height: var(--line-height-tight);
+    }
+
+    .result.incorrect {
+      color: var(--color-incorrect);
+      background: var(--color-incorrect-soft);
+      border-color: color-mix(in srgb, var(--color-incorrect), var(--color-border) 55%);
+    }
+
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-3);
+      color: var(--color-muted);
+      font-size: var(--text-size-small);
+    }
+
+    @media (max-width: 42rem) {
+      .topbar {
+        grid-template-columns: 1fr;
+        align-items: start;
+      }
+
+      .actions,
+      .question-head {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+      }
+
+      .actions > *,
+      .question-head > * {
+        flex: 1 1 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app" id="app">
+    <header class="topbar">
+      <div class="brand">
+        <p class="eyebrow">Numerical Analysis</p>
+        <h1>Practice Question Generator</h1>
+        <p class="muted">Randomized practice based on the supplementary preparation material.</p>
+      </div>
+      <button class="secondary" type="button" id="changeTopics">Change topics</button>
+    </header>
+
+    <section class="setup" id="setup" aria-labelledby="setupTitle">
+      <div>
+        <h2 id="setupTitle">Choose what to practice</h2>
+        <p class="muted">Pick one topic, several topics, or everything. You can change this later.</p>
+      </div>
+      <div class="topic-grid" id="topicGrid"></div>
+      <div class="settings-grid">
+        <label class="field" for="questionLimit">
+          <span>Question count</span>
+          <input id="questionLimit" type="number" min="1" max="100" step="1" value="10">
+        </label>
+      </div>
+      <div class="actions">
+        <button type="button" id="selectAll">Select all topics</button>
+        <button type="button" id="startPractice">Start practice</button>
+      </div>
+    </section>
+
+    <section class="workspace" id="workspace" aria-live="polite">
+      <div class="panel">
+        <div class="question-head">
+          <span class="chip" id="topicChip">Topic</span>
+          <div class="stats">
+            <span id="questionCount">Question 1</span>
+            <span id="activeTopics">All topics</span>
+          </div>
+        </div>
+
+        <p class="question" id="questionText"></p>
+        <div class="data-box" id="dataBox"></div>
+
+        <div class="answer-box">
+          <div class="answer-row">
+            <label for="answerInput"><strong>Your answer</strong></label>
+            <input id="answerInput" type="text" placeholder="Type the final value here.">
+          </div>
+          <span class="check-target" id="checkTarget"></span>
+          <div class="choice-box" id="choiceBox"></div>
+          <input id="extraAnswerInput" type="text" placeholder="Type the outlier value here.">
+        </div>
+
+        <div class="result" id="resultBox"></div>
+
+        <div class="actions practice-actions">
+          <button type="button" id="showAnswer">Show answer</button>
+          <button class="secondary" type="button" id="newQuestion">Skip</button>
+          <button type="button" id="checkAnswer">Check answer</button>
+        </div>
+
+        <div class="feedback" id="feedback">
+          <h2>Answer key</h2>
+          <div id="answerKey"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const numberFormat = new Intl.NumberFormat("en", { maximumFractionDigits: 3 });
+    const percentFormat = new Intl.NumberFormat("en", { style: "percent", maximumFractionDigits: 1 });
+
+    const state = {
+      selectedTopicIds: [],
+      currentQuestion: null,
+      count: 0,
+      targetCount: 10,
+      correctCount: 0,
+      completed: false
+    };
+
+    const topics = [
+      {
+        id: "statistics",
+        title: "Descriptive Statistics and Quartiles",
+        summary: "Median, quartiles, five-number summaries, IQR, and outliers.",
+        make: makeStatisticsQuestion
+      },
+      {
+        id: "probability",
+        title: "Probability",
+        summary: "Joint, marginal, conditional probabilities, and independence.",
+        make: makeProbabilityQuestion
+      },
+      {
+        id: "hypothesis",
+        title: "Hypothesis Testing",
+        summary: "Null and alternative hypotheses, t statistics, p-values, and decisions.",
+        make: makeHypothesisQuestion
+      },
+      {
+        id: "errors",
+        title: "Type I and Type II Errors",
+        summary: "Identify Type I or Type II errors using a definite answer code.",
+        make: makeErrorQuestion
+      },
+      {
+        id: "confidence",
+        title: "Confidence Intervals",
+        summary: "t and z intervals, standard error, and interpretation.",
+        make: makeConfidenceQuestion
+      },
+      {
+        id: "distributions",
+        title: "Normal vs t Distribution",
+        summary: "Choose normal or t distribution and calculate degrees of freedom.",
+        make: makeDistributionQuestion
+      },
+      {
+        id: "vectors",
+        title: "Vectors, Cross Product, and Matrices",
+        summary: "Vector arithmetic, dot products, cross products, matrix operations.",
+        make: makeVectorMatrixQuestion
+      },
+      {
+        id: "boxplots",
+        title: "Box-and-Whisker Plot with Outlier",
+        summary: "Five-number summaries, fences, outliers, and skewness.",
+        make: makeBoxplotQuestion
+      }
+    ];
+
+    const setup = document.getElementById("setup");
+    const workspace = document.getElementById("workspace");
+    const topicGrid = document.getElementById("topicGrid");
+    const topicChip = document.getElementById("topicChip");
+    const questionText = document.getElementById("questionText");
+    const dataBox = document.getElementById("dataBox");
+    const checkTarget = document.getElementById("checkTarget");
+    const choiceBox = document.getElementById("choiceBox");
+    const answerInput = document.getElementById("answerInput");
+    const extraAnswerInput = document.getElementById("extraAnswerInput");
+    const resultBox = document.getElementById("resultBox");
+    const feedback = document.getElementById("feedback");
+    const answerKey = document.getElementById("answerKey");
+    const questionCount = document.getElementById("questionCount");
+    const activeTopics = document.getElementById("activeTopics");
+    const checkAnswerButton = document.getElementById("checkAnswer");
+    const skipButton = document.getElementById("newQuestion");
+
+    function init() {
+      topicGrid.innerHTML = topics.map(topic => `
+        <label class="topic-option">
+          <input type="checkbox" value="${topic.id}">
+          <span>Topic</span>
+          <strong>${topic.title}</strong>
+          <small>${topic.summary}</small>
+        </label>
+      `).join("");
+
+      document.getElementById("selectAll").addEventListener("click", selectAllTopics);
+      document.getElementById("startPractice").addEventListener("click", startPractice);
+      document.getElementById("changeTopics").addEventListener("click", showSetup);
+      skipButton.addEventListener("click", nextQuestionOrFinish);
+      checkAnswerButton.addEventListener("click", handleCheckButton);
+      document.getElementById("showAnswer").addEventListener("click", showAnswer);
+
+      selectAllTopics();
+    }
+
+    function selectAllTopics() {
+      topicGrid.querySelectorAll("input").forEach(input => {
+        input.checked = true;
+      });
+    }
+
+    function startPractice() {
+      const selected = Array.from(topicGrid.querySelectorAll("input:checked")).map(input => input.value);
+      const requestedCount = Number(document.getElementById("questionLimit").value);
+      state.selectedTopicIds = selected.length ? selected : topics.map(topic => topic.id);
+      state.targetCount = Number.isFinite(requestedCount) ? Math.min(100, Math.max(1, Math.round(requestedCount))) : 10;
+      state.count = 0;
+      state.correctCount = 0;
+      state.completed = false;
+      setup.style.display = "none";
+      workspace.classList.add("active");
+      renderNewQuestion();
+    }
+
+    function showSetup() {
+      setup.style.display = "grid";
+      workspace.classList.remove("active");
+    }
+
+    function renderNewQuestion() {
+      const pool = topics.filter(topic => state.selectedTopicIds.includes(topic.id));
+      const topic = pick(pool);
+      const question = topic.make();
+      state.currentQuestion = { topic, question, markedCorrect: false };
+      state.count += 1;
+
+      topicChip.textContent = topic.title;
+      questionText.textContent = question.prompt;
+      dataBox.textContent = question.data;
+      checkTarget.textContent = question.checkPrompt || "Final answer expected: enter the requested value.";
+      renderChoices(question.choices || []);
+      answerInput.value = "";
+      answerInput.classList.toggle("hidden", question.textInput === false);
+      extraAnswerInput.value = "";
+      extraAnswerInput.classList.remove("visible");
+      resultBox.textContent = "";
+      resultBox.className = "result";
+      answerKey.innerHTML = "";
+      feedback.classList.remove("visible");
+      questionCount.textContent = `Question ${state.count} of ${state.targetCount}`;
+      activeTopics.textContent = pool.length === topics.length ? "All topics" : `${pool.length} topic${pool.length === 1 ? "" : "s"}`;
+      skipButton.textContent = "Skip";
+      checkAnswerButton.textContent = "Check answer";
+      if (question.textInput === false) {
+        const firstChoice = choiceBox.querySelector("input");
+        if (firstChoice) firstChoice.focus();
+      } else {
+        answerInput.focus();
+      }
+    }
+
+    function nextQuestionOrFinish() {
+      if (state.completed) {
+        showSetup();
+        return;
+      }
+      if (state.count >= state.targetCount) {
+        showCompletion();
+        return;
+      }
+      renderNewQuestion();
+    }
+
+    function showCompletion() {
+      state.currentQuestion = null;
+      topicChip.textContent = "Complete";
+      questionText.textContent = "Practice set complete.";
+      dataBox.textContent = `Score: ${state.correctCount} correct out of ${state.targetCount} checked questions.`;
+      checkTarget.textContent = "Choose new topics or start another practice set when you are ready.";
+      renderChoices([]);
+      answerInput.value = "";
+      answerInput.classList.remove("hidden");
+      extraAnswerInput.value = "";
+      extraAnswerInput.classList.remove("visible");
+      resultBox.textContent = "";
+      resultBox.className = "result";
+      answerKey.innerHTML = "";
+      feedback.classList.remove("visible");
+      skipButton.textContent = "New set";
+      checkAnswerButton.textContent = "Check answer";
+      state.completed = true;
+    }
+
+    function handleCheckButton() {
+      if (state.currentQuestion && state.currentQuestion.markedCorrect) {
+        nextQuestionOrFinish();
+        return;
+      }
+      checkAnswer();
+    }
+
+    function checkAnswer() {
+      if (!state.currentQuestion) return;
+      const selectedChoices = Array.from(choiceBox.querySelectorAll("input:checked")).map(input => input.value);
+      const response = state.currentQuestion.question.check(answerInput.value, selectedChoices, extraAnswerInput.value);
+      resultBox.textContent = response.correct ? "Correct" : "Try again.";
+      resultBox.className = `result visible ${response.correct ? "correct" : "incorrect"}`;
+      if (response.correct && !state.currentQuestion.markedCorrect) {
+        state.correctCount += 1;
+        state.currentQuestion.markedCorrect = true;
+        checkAnswerButton.textContent = state.count >= state.targetCount ? "Finish practice" : "Next question";
+      }
+    }
+
+    function renderChoices(choices) {
+      if (!choices.length) {
+        choiceBox.innerHTML = "";
+        choiceBox.classList.remove("visible");
+        return;
+      }
+      choiceBox.innerHTML = choices.map(choice => `
+        <label class="choice-option">
+          <input type="checkbox" value="${choice.id}">
+          <span>${choice.label}</span>
+        </label>
+      `).join("");
+      choiceBox.querySelectorAll("input").forEach(input => {
+        input.addEventListener("change", syncExtraInputVisibility);
+      });
+      choiceBox.classList.add("visible");
+      syncExtraInputVisibility();
+    }
+
+    function syncExtraInputVisibility() {
+      const question = state.currentQuestion && state.currentQuestion.question;
+      const triggerId = question && question.extraInputWhenChoiceId;
+      if (!triggerId) {
+        extraAnswerInput.classList.remove("visible");
+        return;
+      }
+      const shouldShow = Boolean(choiceBox.querySelector(`input[value="${triggerId}"]:checked`));
+      extraAnswerInput.classList.toggle("visible", shouldShow);
+      if (!shouldShow) extraAnswerInput.value = "";
+    }
+
+    function showAnswer() {
+      if (!state.currentQuestion) return;
+      answerKey.innerHTML = `<div>${state.currentQuestion.question.answer}</div>`;
+      feedback.classList.add("visible");
+    }
+
+    function makeStatisticsQuestion() {
+      const n = pick([9, 11, 12, 13]);
+      const values = sortedUnique(n, 4, 52);
+      const medianValue = median(values);
+      const q1 = median(values.slice(0, Math.floor(values.length / 2)));
+      const q3 = median(values.slice(Math.ceil(values.length / 2)));
+      const iqr = q3 - q1;
+      const lowFence = q1 - 1.5 * iqr;
+      const highFence = q3 + 1.5 * iqr;
+      const outliers = values.filter(value => value < lowFence || value > highFence);
+      const targets = [
+        ["median", medianValue],
+        ["Q1", q1],
+        ["Q3", q3],
+        ["IQR", iqr],
+        ["range", Math.max(...values) - Math.min(...values)]
+      ];
+      const target = pick(targets);
+      return {
+        prompt: `Find the ${target[0]}.`,
+        data: `Data set:\n${values.join(", ")}`,
+        checkPrompt: `Final answer expected: ${target[0]}.`,
+        check: makeNumberChecker([target[1]], 0.02),
+        answer: [
+          line(target[0], fmt(target[1]))
+        ].join("<br>")
+      };
+    }
+
+    function makeProbabilityQuestion() {
+      const aLow = rand(8, 36);
+      const aHigh = rand(8, 36);
+      const bLow = rand(8, 36);
+      const bHigh = rand(8, 36);
+      const total = aLow + aHigh + bLow + bHigh;
+      const rowA = aLow + aHigh;
+      const lowTotal = aLow + bLow;
+      const independent = nearly((aLow / total), (rowA / total) * (lowTotal / total));
+      const targets = [
+        ["P(A and Low)", aLow / total],
+        ["P(A)", rowA / total],
+        ["P(Low | A)", aLow / rowA],
+        ["P(High | A)", aHigh / rowA],
+        ["P(Low)", lowTotal / total]
+      ];
+      const target = pick(targets);
+      const askIndependence = Math.random() < 0.25;
+      return {
+        prompt: askIndependence ? "Are Group A and Low independent?" : `Compute ${target[0]}.`,
+        data: [
+          "Table:",
+          "             Low   High   Total",
+          `Group A      ${pad(aLow)}   ${pad(aHigh)}    ${pad(rowA)}`,
+          `Group B      ${pad(bLow)}   ${pad(bHigh)}    ${pad(bLow + bHigh)}`,
+          `Total        ${pad(lowTotal)}   ${pad(aHigh + bHigh)}    ${pad(total)}`
+        ].join("\n"),
+        checkPrompt: askIndependence ? "Final answer expected: select yes or no." : `Final answer expected: ${target[0]}.`,
+        choices: askIndependence ? yesNoChoices() : [],
+        textInput: !askIndependence,
+        check: askIndependence ? makeChoiceChecker([independent ? "yes" : "no"]) : makeNumberChecker([target[1]], 0.02),
+        answer: [
+          askIndependence
+            ? line("Independent", independent ? "Yes" : "No")
+            : line(target[0], fmt(target[1]))
+        ].join("<br>")
+      };
+    }
+
+    function makeHypothesisQuestion() {
+      const mu0 = rand(60, 90);
+      const n = 12;
+      const sample = Array.from({ length: n }, () => mu0 + rand(-4, 12));
+      const xbar = mean(sample);
+      const s = stdev(sample);
+      const t = (xbar - mu0) / (s / Math.sqrt(n));
+      const reject = t > 1.796;
+      const askDecision = Math.random() < 0.5;
+      return {
+        prompt: askDecision ? "At alpha = 0.05, should H0 be rejected?" : "Compute the t statistic for this right-tailed one-sample test.",
+        data: `Claim baseline: mu = ${mu0}\nSample:\n${sample.join(", ")}`,
+        checkPrompt: askDecision ? "Final answer expected: select yes or no." : "Final answer expected: t statistic.",
+        choices: askDecision ? yesNoChoices() : [],
+        textInput: !askDecision,
+        check: askDecision ? makeChoiceChecker([reject ? "yes" : "no"]) : makeNumberChecker([t], 0.08),
+        answer: [
+          askDecision ? line("Reject H0", reject ? "Yes" : "No") : line("t", fmt(t))
+        ].join("<br>")
+      };
+    }
+
+    function makeErrorQuestion() {
+      const contexts = [
+        ["cereal boxes", "average 500 g", "underfilled"],
+        ["machine parts", "average 12 mm", "too small"],
+        ["battery packs", "average 8 hours", "below target"]
+      ];
+      const item = pick(contexts);
+      const errorCode = pick([1, 2]);
+      const description = errorCode === 1
+        ? `The test concludes the ${item[0]} are ${item[2]}, but the true mean meets the target.`
+        : `The test fails to detect that the ${item[0]} are truly ${item[2]}.`;
+      return {
+        prompt: "Which error type is described?",
+        data: `Scenario: ${item[0]} should ${item[1]}.\nH0: mu = target\nH1: mu is ${item[2]}\n\nDescription:\n${description}`,
+        checkPrompt: "Final answer expected: select exactly one checkbox.",
+        choices: [
+          { id: "type1", label: "Type I error" },
+          { id: "type2", label: "Type II error" }
+        ],
+        textInput: false,
+        check: makeChoiceChecker([`type${errorCode}`]),
+        answer: [
+          line("Error type", errorCode === 1 ? "Type I error" : "Type II error")
+        ].join("<br>")
+      };
+    }
+
+    function makeConfidenceQuestion() {
+      const n = pick([12, 15, 18, 20, 24]);
+      const xbar = randDecimal(18, 64, 1);
+      const s = randDecimal(2, 9, 1);
+      const tStar = { 12: 2.201, 15: 2.145, 18: 2.11, 20: 2.093, 24: 2.069 }[n];
+      const se = s / Math.sqrt(n);
+      const margin = tStar * se;
+      const target = pick([
+        ["standard error", se],
+        ["margin of error", margin],
+        ["lower bound", xbar - margin],
+        ["upper bound", xbar + margin]
+      ]);
+      return {
+        prompt: `Find the ${target[0]} for the 95% t confidence interval.`,
+        data: `Given:\nx-bar = ${xbar}\ns = ${s}\nn = ${n}`,
+        checkPrompt: `Final answer expected: ${target[0]}.`,
+        check: makeNumberChecker([target[1]], 0.03),
+        answer: [
+          line(target[0], fmt(target[1]))
+        ].join("<br>")
+      };
+    }
+
+    function makeDistributionQuestion() {
+      const n = pick([6, 9, 13, 21, 31]);
+      const sigmaKnown = pick([true, false]);
+      const df = sigmaKnown ? 0 : n - 1;
+      const askDistribution = Math.random() < 0.5;
+      return {
+        prompt: askDistribution ? "Which sampling distribution should be used?" : "Find the degrees of freedom. If normal is used, df = 0.",
+        data: `Situation:\nsigma is ${sigmaKnown ? "known" : "unknown"}\nsample size n = ${n}\npopulation is approximately normal`,
+        checkPrompt: askDistribution ? "Final answer expected: select one checkbox." : "Final answer expected: df.",
+        choices: askDistribution ? [
+          { id: "normal", label: "Normal distribution" },
+          { id: "t", label: "t distribution" }
+        ] : [],
+        textInput: !askDistribution,
+        check: askDistribution ? makeChoiceChecker([sigmaKnown ? "normal" : "t"]) : makeNumberChecker([df], 0),
+        answer: [
+          askDistribution ? line("Distribution", sigmaKnown ? "Normal" : "t") : line("df", df)
+        ].join("<br>")
+      };
+    }
+
+    function makeVectorMatrixQuestion() {
+      const choice = rand(1, 3);
+      if (choice === 1) {
+        const a = [rand(-4, 6), rand(-4, 6), rand(-4, 6)];
+        const b = [rand(-4, 6), rand(-4, 6), rand(-4, 6)];
+        const k = pick([-3, -2, 2, 3]);
+        const ka = a.map(value => k * value);
+        const sumVector = a.map((value, index) => value + b[index]);
+        const dot = a.reduce((sum, value, index) => sum + value * b[index], 0);
+        const mag = Math.sqrt(a.reduce((sum, value) => sum + value * value, 0));
+        const targets = [
+          ["first component of ka", ka[0]],
+          ["second component of ka", ka[1]],
+          ["third component of ka", ka[2]],
+          ["first component of a + b", sumVector[0]],
+          ["second component of a + b", sumVector[1]],
+          ["third component of a + b", sumVector[2]],
+          ["a dot b", dot],
+          ["magnitude of a", mag]
+        ];
+        const target = pick(targets);
+        return {
+          prompt: `Find the ${target[0]}.`,
+          data: `a = [${a.join(", ")}]\nb = [${b.join(", ")}]\nk = ${k}`,
+          checkPrompt: `Final answer expected: ${target[0]}.`,
+          check: makeNumberChecker([target[1]], 0.03),
+          answer: [
+            line(target[0], fmt(target[1]))
+          ].join("<br>")
+        };
+      }
+      if (choice === 2) {
+        const a = [rand(-4, 5), rand(-4, 5), rand(-4, 5)];
+        const b = [rand(-4, 5), rand(-4, 5), rand(-4, 5)];
+        const cross = [
+          a[1] * b[2] - a[2] * b[1],
+          a[2] * b[0] - a[0] * b[2],
+          a[0] * b[1] - a[1] * b[0]
+        ];
+        const crossMag = Math.sqrt(cross.reduce((sum, value) => sum + value * value, 0));
+        const target = pick([
+          ["first component of a x b", cross[0]],
+          ["second component of a x b", cross[1]],
+          ["third component of a x b", cross[2]],
+          ["magnitude of a x b", crossMag]
+        ]);
+        return {
+          prompt: `Find the ${target[0]}.`,
+          data: `a = [${a.join(", ")}]\nb = [${b.join(", ")}]`,
+          checkPrompt: `Final answer expected: ${target[0]}.`,
+          check: makeNumberChecker([target[1]], 0.03),
+          answer: [
+            line(target[0], fmt(target[1]))
+          ].join("<br>")
+        };
+      }
+      const m = [[rand(-3, 5), rand(-3, 5)], [rand(-3, 5), rand(-3, 5)]];
+      const n = [[rand(-3, 5), rand(-3, 5)], [rand(-3, 5), rand(-3, 5)]];
+      const det = m[0][0] * m[1][1] - m[0][1] * m[1][0];
+      const matrixSum = addMatrices(m, n);
+      const matrixDouble = scaleMatrix(m, 2);
+      const matrixProduct = multiplyMatrices(m, n);
+      const matrixTargets = [
+        ["top-left entry of M + N", matrixSum[0][0]],
+        ["top-right entry of M + N", matrixSum[0][1]],
+        ["bottom-left entry of M + N", matrixSum[1][0]],
+        ["bottom-right entry of M + N", matrixSum[1][1]],
+        ["top-left entry of 2M", matrixDouble[0][0]],
+        ["bottom-right entry of 2M", matrixDouble[1][1]],
+        ["top-left entry of MN", matrixProduct[0][0]],
+        ["top-right entry of MN", matrixProduct[0][1]],
+        ["bottom-left entry of MN", matrixProduct[1][0]],
+        ["bottom-right entry of MN", matrixProduct[1][1]],
+        ["det(M)", det]
+      ];
+      const askInvertible = Math.random() < 0.2;
+      const target = pick(matrixTargets);
+      return {
+        prompt: askInvertible ? "Is M invertible?" : `Find the ${target[0]}.`,
+        data: `M = ${matrix(m)}\nN = ${matrix(n)}`,
+        checkPrompt: askInvertible ? "Final answer expected: select yes or no." : `Final answer expected: ${target[0]}.`,
+        choices: askInvertible ? yesNoChoices() : [],
+        textInput: !askInvertible,
+        check: askInvertible ? makeChoiceChecker([det === 0 ? "no" : "yes"]) : makeNumberChecker([target[1]], 0.02),
+        answer: [
+          askInvertible ? line("Invertible", det === 0 ? "No" : "Yes") : line(target[0], fmt(target[1]))
+        ].join("<br>")
+      };
+    }
+
+    function makeBoxplotQuestion() {
+      const base = sortedUnique(10, 24, 82);
+      const outlier = Math.max(...base) + rand(24, 46);
+      const values = [...base, outlier].sort((a, b) => a - b);
+      const medianValue = median(values);
+      const q1 = median(values.slice(0, Math.floor(values.length / 2)));
+      const q3 = median(values.slice(Math.ceil(values.length / 2)));
+      const iqr = q3 - q1;
+      const highFence = q3 + 1.5 * iqr;
+      const lowFence = q1 - 1.5 * iqr;
+      const outliers = values.filter(value => value < lowFence || value > highFence);
+      const target = pick([
+        ["Q1", q1],
+        ["median", medianValue],
+        ["Q3", q3],
+        ["IQR", iqr],
+        ["lower fence", lowFence],
+        ["upper fence", highFence]
+      ]);
+      const askOutlier = Math.random() < 0.35;
+      return {
+        prompt: askOutlier ? "Does this data set have an outlier? If yes, enter the outlier value." : `Find the ${target[0]}.`,
+        data: `Data:\n${values.join(", ")}`,
+        checkPrompt: askOutlier ? "Final answer expected: select yes or no. If yes, type the outlier value in the extra box." : `Final answer expected: ${target[0]}.`,
+        choices: askOutlier ? yesNoChoices() : [],
+        textInput: !askOutlier,
+        extraInputWhenChoiceId: askOutlier ? "yes" : "",
+        check: askOutlier ? makeOutlierChecker(outliers) : makeNumberChecker([target[1]], 0.02),
+        answer: [
+          askOutlier ? line("Outlier exists", outliers.length ? `Yes, ${outliers.join(", ")}` : "No") : line(target[0], fmt(target[1]))
+        ].join("<br>")
+      };
+    }
+
+    function rand(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function randDecimal(min, max, places) {
+      const scale = Math.pow(10, places);
+      return Math.round((Math.random() * (max - min) + min) * scale) / scale;
+    }
+
+    function pick(items) {
+      return items[Math.floor(Math.random() * items.length)];
+    }
+
+    function sortedUnique(count, min, max) {
+      const values = new Set();
+      while (values.size < count) values.add(rand(min, max));
+      return Array.from(values).sort((a, b) => a - b);
+    }
+
+    function mean(values) {
+      return values.reduce((sum, value) => sum + value, 0) / values.length;
+    }
+
+    function stdev(values) {
+      const xbar = mean(values);
+      const variance = values.reduce((sum, value) => sum + Math.pow(value - xbar, 2), 0) / (values.length - 1);
+      return Math.sqrt(variance);
+    }
+
+    function median(values) {
+      const sorted = [...values].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+    }
+
+    function fmt(value) {
+      return numberFormat.format(value);
+    }
+
+    function makeNumberChecker(expectedValues, tolerance) {
+      return userAnswer => {
+        const result = numbersMatch(userAnswer, expectedValues, tolerance);
+        return {
+          correct: result.correct,
+          message: result.correct
+            ? "Correct. You can move to the next question, revise your work, or show the full answer key."
+            : `Not quite yet. Check the requested final values and try again. Matched ${result.matched} of ${expectedValues.length} expected number${expectedValues.length === 1 ? "" : "s"}.`
+        };
+      };
+    }
+
+    function makeChoiceChecker(expectedChoiceIds) {
+      return (userAnswer, selectedChoiceIds) => {
+        const correct = choicesMatch(selectedChoiceIds, expectedChoiceIds);
+        return {
+          correct,
+          message: correct
+            ? "Correct. The selected choice matches the answer key."
+            : "Not quite yet. Change the selected checkbox and try again."
+        };
+      };
+    }
+
+    function makeChoiceNumberChecker(expectedChoiceIds, expectedValues, tolerance) {
+      return (userAnswer, selectedChoiceIds) => {
+        const numberResult = numbersMatch(userAnswer, expectedValues, tolerance);
+        const choiceResult = choicesMatch(selectedChoiceIds, expectedChoiceIds);
+        const correct = choiceResult && numberResult.correct;
+        return {
+          correct,
+          message: correct
+            ? "Correct. The selected choice and typed value match the answer key."
+            : "Not quite yet. Check the selected checkbox and the typed final value, then try again."
+        };
+      };
+    }
+
+    function makeOutlierChecker(outliers) {
+      return (userAnswer, selectedChoiceIds, extraAnswer) => {
+        const expectsOutlier = outliers.length > 0;
+        const choiceCorrect = choicesMatch(selectedChoiceIds, [expectsOutlier ? "yes" : "no"]);
+        const numberCorrect = expectsOutlier ? numbersMatch(extraAnswer, outliers, 0.02).correct : true;
+        const correct = choiceCorrect && numberCorrect;
+        return {
+          correct,
+          message: correct
+            ? "Correct. The outlier choice matches the answer key."
+            : "Not quite yet. Select the correct yes/no choice, and if yes, enter the outlier value."
+        };
+      };
+    }
+
+    function makeTextChecker(requiredTerms) {
+      return userAnswer => {
+        const normalized = normalizeText(userAnswer);
+        const missing = requiredTerms.filter(term => !termMatches(normalized, term));
+        return {
+          correct: missing.length === 0,
+          message: missing.length === 0
+            ? "Correct. The required final terms are present."
+            : "Not quite yet. Check the required final terms and try again."
+        };
+      };
+    }
+
+    function makeMixedChecker(expectedValues, requiredTerms, tolerance) {
+      return userAnswer => {
+        const numberResult = numbersMatch(userAnswer, expectedValues, tolerance);
+        const normalized = normalizeText(userAnswer);
+        const missingTerms = requiredTerms.filter(term => !termMatches(normalized, term));
+        const correct = numberResult.correct && missingTerms.length === 0;
+        return {
+          correct,
+          message: correct
+            ? "Correct. Your answer has the expected values and decision."
+            : "Not quite yet. Check both the numerical values and the final decision, then try again."
+        };
+      };
+    }
+
+    function makeHypothesisChecker(tValue, shouldReject) {
+      return userAnswer => {
+        const numberResult = numbersMatch(userAnswer, [tValue], 0.08);
+        const normalized = normalizeText(userAnswer);
+        const decisionMatches = shouldReject
+          ? normalized.includes("reject") && !normalized.includes("fail")
+          : normalized.includes("fail") && normalized.includes("reject");
+        return {
+          correct: numberResult.correct && decisionMatches,
+          message: numberResult.correct && decisionMatches
+            ? "Correct. Your t statistic and decision match the test."
+            : "Not quite yet. Check the t statistic and whether the decision is reject or fail to reject."
+        };
+      };
+    }
+
+    function numbersMatch(userAnswer, expectedValues, tolerance) {
+      const foundNumbers = extractNumbers(userAnswer);
+      const used = new Set();
+      let matched = 0;
+      expectedValues.forEach(expected => {
+        const matchIndex = foundNumbers.findIndex((value, index) => {
+          return !used.has(index) && Math.abs(value - expected) <= tolerance;
+        });
+        if (matchIndex >= 0) {
+          used.add(matchIndex);
+          matched += 1;
+        }
+      });
+      return { correct: matched === expectedValues.length, matched };
+    }
+
+    function choicesMatch(selectedChoiceIds, expectedChoiceIds) {
+      if (selectedChoiceIds.length !== expectedChoiceIds.length) return false;
+      return expectedChoiceIds.every(id => selectedChoiceIds.includes(id));
+    }
+
+    function yesNoChoices() {
+      return [
+        { id: "yes", label: "Yes" },
+        { id: "no", label: "No" }
+      ];
+    }
+
+    function extractNumbers(text) {
+      const values = [];
+      const fractionPattern = /-?\d+(?:\.\d+)?\s*\/\s*-?\d+(?:\.\d+)?/g;
+      const fractions = text.match(fractionPattern) || [];
+      fractions.forEach(match => {
+        const parts = match.split("/").map(part => Number(part.trim()));
+        if (parts[1] !== 0) values.push(parts[0] / parts[1]);
+      });
+      const textWithoutFractions = text.replace(fractionPattern, " ");
+      const numbers = textWithoutFractions.match(/-?\d+(?:\.\d+)?/g) || [];
+      numbers.forEach(match => values.push(Number(match)));
+      return values.filter(value => Number.isFinite(value));
+    }
+
+    function normalizeText(text) {
+      return String(text).toLowerCase().replace(/\s+/g, " ").trim();
+    }
+
+    function termMatches(normalizedText, term) {
+      return String(term).split("|").some(option => normalizedText.includes(normalizeText(option)));
+    }
+
+    function pad(value) {
+      return String(value).padStart(3, " ");
+    }
+
+    function line(label, value) {
+      return `<strong>${label}:</strong> ${value}`;
+    }
+
+    function vector(values) {
+      return `[${values.join(", ")}]`;
+    }
+
+    function matrix(values) {
+      return `[[${values[0].join(", ")}], [${values[1].join(", ")}]]`;
+    }
+
+    function addMatrices(a, b) {
+      return a.map((row, rowIndex) => row.map((value, colIndex) => value + b[rowIndex][colIndex]));
+    }
+
+    function scaleMatrix(a, scalar) {
+      return a.map(row => row.map(value => value * scalar));
+    }
+
+    function multiplyMatrices(a, b) {
+      return [
+        [
+          a[0][0] * b[0][0] + a[0][1] * b[1][0],
+          a[0][0] * b[0][1] + a[0][1] * b[1][1]
+        ],
+        [
+          a[1][0] * b[0][0] + a[1][1] * b[1][0],
+          a[1][0] * b[0][1] + a[1][1] * b[1][1]
+        ]
+      ];
+    }
+
+    function nearly(a, b) {
+      return Math.abs(a - b) < 0.000001;
+    }
+
+    init();
+  </script>
+</body>
+</html>

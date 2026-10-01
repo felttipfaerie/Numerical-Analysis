@@ -1,0 +1,13 @@
+# R and RStudio session state (machine-specific; do not commit)
+.Rproj.user/
+.RData
+.Rhistory
+.RDataTmp
+
+# R session-state files anywhere in the project
+**/.RData
+**/.Rhistory
+**/.RDataTmp
+
+# Large binary data is retained locally; publish code and generated material only
+*.sav
