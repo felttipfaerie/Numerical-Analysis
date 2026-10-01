@@ -7,7 +7,8 @@ library(ggplot2)
 library(sf)
 
 
-Covid19_India_Jan_20_Mar_20_ <- read_csv("unit-9/covid-data-set/Covid19 India (Jan 20 - Mar 20).csv")
+# This script is run from unit-9/covid-data-set, so the CSV is in the current working directory.
+Covid19_India_Jan_20_Mar_20_ <- read_csv("Covid19 India (Jan 20 - Mar 20).csv")
 View(Covid19_India_Jan_20_Mar_20_)
 
 df <- Covid19_India_Jan_20_Mar_20_
