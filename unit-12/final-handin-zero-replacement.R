@@ -122,6 +122,29 @@ pairs.panels(
   pch = 19
 )
 
+# Kendall's tau for each predictor against the binary diabetes outcome.
+# Building this table here makes the script reproducible in a fresh R session.
+outcome_predictors <- setdiff(names(numeric_df), "Outcome")
+
+cor_table <- lapply(outcome_predictors, function(predictor) {
+  complete_rows <- complete.cases(df[[predictor]], df$Outcome)
+  correlation_test <- cor.test(
+    df[[predictor]][complete_rows],
+    df$Outcome[complete_rows],
+    method = "kendall",
+    exact = FALSE
+  )
+
+  data.frame(
+    Variable = predictor,
+    Kendall_tau = unname(correlation_test$estimate),
+    p_value = correlation_test$p.value,
+    n = sum(complete_rows)
+  )
+}) %>%
+  bind_rows() %>%
+  arrange(desc(abs(Kendall_tau)))
+
 #Table data
 cor_table$EffectSize <- cut(
   abs(cor_table$Kendall_tau),
@@ -887,8 +910,6 @@ adjusted_tests
 # 4. Adjusted odds ratios and 95% confidence intervals
 # ------------------------------------------------------------
 
-library(broom)
-
 adjusted_OR <- tidy(
   model_age_preg,
   exponentiate = TRUE,
@@ -1077,351 +1098,312 @@ ggplot(df, aes(x = factor(Outcome), y = Pregnancies)) +
   )
 
 
+#----------------
+#visualise the catagories
+#--------------------
 
+plot_category <- function(data, variable, title) {
+  
+  ggplot(
+    data,
+    aes(x = {{ variable }}, fill = {{ variable }})
+  ) +
+    geom_bar(width = 0.55) +
+    geom_text(
+      stat = "count",
+      aes(label = after_stat(count)),
+      vjust = -0.35,
+      fontface = "bold",
+      size = 5
+    ) +
+    scale_fill_manual(
+      values = c(
+        "#66D9CC",
+        "#008C95",
+        "#006D75",
+        "#004F55"
+      ),
+      guide = "none"
+    ) +
+    scale_y_continuous(
+      expand = expansion(mult = c(0, 0.08))
+    ) +
+    labs(
+      title = title,
+      x = NULL,
+      y = "Count",
+      caption = adjustment_caption
+    ) +
+    theme_classic(base_size = 13) +
+    theme(
+      plot.title = element_text(
+        face = "bold",
+        size = 16
+      ),
+      axis.text.x = element_text(
+        size = 12
+      )
+    )
+}
 
-
-
-
-
-#individual catagories
-
-#BMI low confidence suggests that there is not a large enough datset.
-# Create separate dataset
-bmi_model_data <- pregnancies_bmi_age
-
-# Make factors unordered
-bmi_model_data$bmi_cat <- factor(
-  bmi_model_data$bmi_cat,
-  ordered = FALSE
+bmi_category_plot <- plot_category(
+  pregnancies_bmi_age,
+  bmi_cat,
+  "Distribution of BMI Categories"
 )
 
-bmi_model_data$age_cat <- factor(
-  bmi_model_data$age_cat,
-  ordered = FALSE
+age_category_plot <- plot_category(
+  pregnancies_bmi_age,
+  age_cat,
+  "Distribution of Age Categories"
 )
 
-bmi_model_data$pregnancy_cat <- factor(
-  bmi_model_data$pregnancy_cat,
-  ordered = FALSE
+pregnancy_category_plot <- plot_category(
+  pregnancies_bmi_age,
+  pregnancy_cat,
+  "Distribution of Pregnancy Categories"
 )
 
-# Set reference category
-bmi_model_data$bmi_cat <- relevel(
-  bmi_model_data$bmi_cat,
-  ref = "Normal"
+print(bmi_category_plot)
+print(age_category_plot)
+print(pregnancy_category_plot)
+
+
+# Correlation of diabetes outcome with the existing age and BMI categories
+# Category construction above is unchanged.
+
+age_complete <- complete.cases(
+  pregnancies_bmi_age$age_cat,
+  pregnancies_bmi_age$Outcome
+)
+age_correlation <- cor.test(
+  as.integer(pregnancies_bmi_age$age_cat[age_complete]),
+  pregnancies_bmi_age$Outcome[age_complete],
+  method = "kendall",
+  exact = FALSE
 )
 
-# Logistic regression
-bmi_model <- glm(
-  Outcome ~ bmi_cat + age_cat + pregnancy_cat,
-  data = bmi_model_data,
-  family = binomial
+bmi_complete <- complete.cases(
+  pregnancies_bmi_age$bmi_cat,
+  pregnancies_bmi_age$Outcome
+)
+bmi_correlation <- cor.test(
+  as.integer(pregnancies_bmi_age$bmi_cat[bmi_complete]),
+  pregnancies_bmi_age$Outcome[bmi_complete],
+  method = "kendall",
+  exact = FALSE
 )
 
-# Extract BMI odds ratios
-bmi_results <- tidy(
-  bmi_model,
-  exponentiate = TRUE,
-  conf.int = TRUE
-) %>%
-  filter(grepl("^bmi_cat", term)) %>%
-  mutate(
-    Category = sub("bmi_cat", "", term)
-  )
+category_correlation_table <- data.frame(
+  Predictor = c("Age groups", "BMI categories"),
+  `Kendall tau-b` = c(
+    unname(age_correlation$estimate),
+    unname(bmi_correlation$estimate)
+  ),
+  `p value` = c(age_correlation$p.value, bmi_correlation$p.value),
+  n = c(sum(age_complete), sum(bmi_complete)),
+  check.names = FALSE
+)
+print(category_correlation_table, row.names = FALSE)
 
-print(bmi_results)
-
-# Plot
-ggplot(
-  bmi_results,
-  aes(x = reorder(Category, estimate), y = estimate)
+category_correlation_plot <- ggplot(
+  category_correlation_table,
+  aes(x = Predictor, y = `Kendall tau-b`, fill = Predictor)
 ) +
-  geom_col(width = 0.65) +
-  geom_errorbar(
-    aes(ymin = conf.low, ymax = conf.high),
-    width = 0.15
+  geom_col(width = 0.55) +
+  geom_text(
+    aes(label = sprintf("%.3f", `Kendall tau-b`)),
+    vjust = -0.35,
+    fontface = "bold",
+    size = 5
   ) +
-  geom_hline(
-    yintercept = 1,
-    linetype = "dashed"
+  scale_fill_manual(
+    values = c(
+      "Age (groups)" = "#66D9CC",
+      "BMI (categories)" = "#008C95"
+    ),
+    guide = "none"
   ) +
-  coord_flip() +
+  scale_y_continuous(
+    limits = c(0, 0.34),
+    breaks = seq(0, 0.30, 0.05),
+    expand = expansion(mult = c(0, 0.02))
+  ) +
   labs(
-    title = "BMI Category and Diabetes Outcome",
-    subtitle = "Reference category: Normal BMI",
-    x = "BMI category",
-    y = "Adjusted Odds Ratio (95% CI)",
-    #zero-value replacement change
+    title = "Association with Diabetes Outcome",
+    x = NULL,
+    y = "Kendall's tau-b",
     caption = adjustment_caption
   ) +
-  theme_minimal()
+  theme_classic(base_size = 13) +
+  theme(
+    plot.title = element_text(
+      face = "bold",
+      size = 16
+    ),
+    axis.text.x = element_text(
+      size = 12
+    )
+  )
+
+print(category_correlation_plot)
 
 
+#--------
+#glucose vs age groups
+#--------
 
+# Correlation of glucose levels with existing age categories
 
-#Age ConfidencePlot
-#less uncertanty, however still not great
+# Category construction above is unchanged.
 
-# Create separate dataset
-age_model_data <- pregnancies_bmi_age
-
-# Make factors unordered
-age_model_data$age_cat <- factor(
-  age_model_data$age_cat,
-  ordered = FALSE
+glucose_age_complete <- complete.cases(
+  pregnancies_bmi_age$age_cat,
+  pregnancies_bmi_age$Glucose
 )
 
-age_model_data$bmi_cat <- factor(
-  age_model_data$bmi_cat,
-  ordered = FALSE
+glucose_age_correlation <- cor.test(
+  as.integer(pregnancies_bmi_age$age_cat[glucose_age_complete]),
+  pregnancies_bmi_age$Glucose[glucose_age_complete],
+  method = "kendall",
+  exact = FALSE
 )
 
-age_model_data$pregnancy_cat <- factor(
-  age_model_data$pregnancy_cat,
-  ordered = FALSE
+glucose_age_correlation
+
+#make Nice table
+
+glucose_age_correlation_table <- data.frame(
+  Predictor = "Age groups",
+  Outcome = "Glucose level",
+  `Kendall tau-b` = unname(glucose_age_correlation$estimate),
+  `p value` = glucose_age_correlation$p.value,
+  n = sum(glucose_age_complete),
+  check.names = FALSE
 )
 
-# Set reference category
-age_model_data$age_cat <- relevel(
-  age_model_data$age_cat,
-  ref = "Under 30"
+print(glucose_age_correlation_table, row.names = FALSE)
+
+
+
+#----------------------
+# Mutually adjusted logistic regression
+#----------------------
+# This model estimates the association of each retained predictor with the
+# diabetes outcome while holding all of the other retained predictors constant.
+# It uses the full cleaned analytic sample for inference.
+
+adjusted_predictors <- c(
+  "Pregnancies",
+  "Glucose",
+  "BloodPressure",
+  "BMI",
+  "DiabetesPedigreeFunction",
+  "Age"
 )
 
-# Logistic regression
-age_model <- glm(
-  Outcome ~ age_cat + bmi_cat + pregnancy_cat,
-  data = age_model_data,
+adjusted_data <- df[, c("Outcome", adjusted_predictors), drop = FALSE]
+adjusted_data <- adjusted_data[complete.cases(adjusted_data), , drop = FALSE]
+adjusted_data$Outcome <- as.integer(as.character(adjusted_data$Outcome))
+
+if (
+  !all(adjusted_data$Outcome %in% c(0L, 1L)) ||
+    !all(c(0L, 1L) %in% adjusted_data$Outcome)
+) {
+  stop("Outcome must be coded as 0 (no diabetes) or 1 (diabetes).")
+}
+
+adjusted_model <- glm(
+  reformulate(adjusted_predictors, response = "Outcome"),
+  data = adjusted_data,
   family = binomial
 )
 
-# Extract age odds ratios
-age_results <- tidy(
-  age_model,
-  exponentiate = TRUE,
-  conf.int = TRUE
+print(summary(adjusted_model))
+
+# Exponentiated coefficients are adjusted odds ratios.  A value above 1 means
+# higher odds of diabetes for a one-unit increase in that predictor, conditional
+# on all the other variables in the model.
+predictor_labels <- c(
+  Pregnancies = "Pregnancies",
+  Glucose = "Glucose",
+  BloodPressure = "Blood pressure",
+  BMI = "BMI",
+  DiabetesPedigreeFunction = "Diabetes pedigree function",
+  Age = "Age"
+)
+
+adjusted_effects <- broom::tidy(
+  adjusted_model,
+  conf.int = TRUE,
+  exponentiate = TRUE
 ) %>%
-  filter(grepl("^age_cat", term)) %>%
-  mutate(
-    Category = sub("age_cat", "", term)
+  filter(term != "(Intercept)") %>%
+  mutate(Predictor = unname(predictor_labels[term]))
+
+adjusted_effects_table <- adjusted_effects %>%
+  transmute(
+    Predictor,
+    `Adjusted OR` = round(estimate, 2),
+    `95% CI` = paste0(round(conf.low, 2), " to ", round(conf.high, 2)),
+    `p value` = format.pval(p.value, digits = 3, eps = 0.001)
   )
 
-print(age_results)
-
-# Plot
-ggplot(
-  age_results,
-  aes(x = reorder(Category, estimate), y = estimate)
-) +
-  geom_col(width = 0.65) +
-  geom_errorbar(
-    aes(ymin = conf.low, ymax = conf.high),
-    width = 0.15
-  ) +
-  geom_hline(
-    yintercept = 1,
-    linetype = "dashed"
-  ) +
-  coord_flip() +
-  labs(
-    title = "Age Category and Diabetes Outcome",
-    subtitle = "Reference category: Under 30",
-    x = "Age category",
-    y = "Adjusted Odds Ratio (95% CI)",
-    #zero-value replacement change
-    caption = adjustment_caption
-  ) +
-  theme_minimal()
-
-
-
-
-#Pregancies confidence interval
-#less uncertanty, more evenly weighted
-
-# Create separate dataset
-pregnancy_model_data <- pregnancies_bmi_age
-
-# Make factors unordered
-pregnancy_model_data$pregnancy_cat <- factor(
-  pregnancy_model_data$pregnancy_cat,
-  ordered = FALSE
-)
-
-pregnancy_model_data$bmi_cat <- factor(
-  pregnancy_model_data$bmi_cat,
-  ordered = FALSE
-)
-
-pregnancy_model_data$age_cat <- factor(
-  pregnancy_model_data$age_cat,
-  ordered = FALSE
-)
-
-# Set reference category
-pregnancy_model_data$pregnancy_cat <- relevel(
-  pregnancy_model_data$pregnancy_cat,
-  ref = "None"
-)
-
-# Logistic regression
-pregnancy_model <- glm(
-  Outcome ~ pregnancy_cat + bmi_cat + age_cat,
-  data = pregnancy_model_data,
-  family = binomial
-)
-
-# Extract pregnancy odds ratios
-pregnancy_results <- tidy(
-  pregnancy_model,
-  exponentiate = TRUE,
-  conf.int = TRUE
-) %>%
-  filter(grepl("^pregnancy_cat", term)) %>%
-  mutate(
-    Category = sub("pregnancy_cat", "", term)
-  )
-
-print(pregnancy_results)
-
-# Plot
-ggplot(
-  pregnancy_results,
-  aes(x = reorder(Category, estimate), y = estimate)
-) +
-  geom_col(width = 0.65) +
-  geom_errorbar(
-    aes(ymin = conf.low, ymax = conf.high),
-    width = 0.15
-  ) +
-  geom_hline(
-    yintercept = 1,
-    linetype = "dashed"
-  ) +
-  coord_flip() +
-  labs(
-    title = "Pregnancy Category and Diabetes Outcome",
-    subtitle = "Reference category: No pregnancies",
-    x = "Pregnancy category",
-    y = "Adjusted Odds Ratio (95% CI)",
-    #zero-value replacement change
-    caption = adjustment_caption
-  ) +
-  theme_minimal()
-
-
-
-#----------
-#Training a model
-#-----------------
-# find relationships accounting for other variab
-set.seed(123)
-
-#annova
-df[] <- lapply(df, function(x) {
-  if (is.factor(x) || is.character(x)) {
-    as.numeric(as.factor(x))
-  } else {
-    as.numeric(x)
-  }
-})
-
-summary(
-  aov(
-    Outcome ~ .,
-    data = data.frame(lapply(df, function(x) {
-      if (is.factor(x) || is.character(x)) {
-        as.numeric(as.factor(x))
-      } else {
-        as.numeric(x)
-      }
-    }))
-  )
-)
-
-
-
-
-
-#train data with split
-
-# Random 70/30 split
-index <- sample(
-  1:nrow(df),
-  size = 0.7 * nrow(df)
-)
-
-trainSplit <- df[index, ]
-testSplit <- df[-index, ]
-
-
-# box-cox unsutible as outcome is binary 
-
-# Fit model using training data only
-model <- glm(
-  Outcome ~ .,
-  data = trainSplit,
-  family = binomial
-)
-
-# Predict probabilities on unseen test data
-predictProb <- predict(
-  model,
-  testSplit,
-  type = "response"
-)
-
-# Convert probabilities to classes
-predictTest <- ifelse(
-  predictProb >= 0.5,
-  1,
-  0
-)
-
-#zero-value replacement change
-valid_predictions <- !is.na(predictTest) & !is.na(testSplit$Outcome)
-#zero-value replacement change
-# Prediction accuracy and the confusion matrix exclude only test records without a usable prediction.
-
-# Confusion matrix
-#zero-value replacement change
 cat(
-  "Predictions evaluated for", sum(valid_predictions),
-  "of", nrow(testSplit), "test records.\n"
+  "Mutually adjusted regression: ", nrow(adjusted_data),
+  " complete records (", sum(adjusted_data$Outcome == 1),
+  " with diabetes).\n",
+  sep = ""
 )
-
-table(
-  Predicted = predictTest[valid_predictions],
-  Actual = testSplit$Outcome[valid_predictions]
+cat(
+  "Each odds ratio is adjusted for every other retained predictor and represents a one-unit increase.\n"
 )
+print(adjusted_effects_table, n = Inf)
 
+# Forest plot: values to the right of 1 indicate higher adjusted odds; values
+# to the left indicate lower adjusted odds.  The log scale makes effects above
+# and below the no-effect value (OR = 1) visually comparable.
+adjusted_effects_plot <- ggplot(
+  adjusted_effects,
+  aes(x = estimate, y = reorder(Predictor, estimate))
+) +
+  geom_vline(xintercept = 1, linetype = "dashed", colour = "grey40") +
+  geom_errorbar(
+    aes(xmin = conf.low, xmax = conf.high),
+    width = 0.18,
+    orientation = "y"
+  ) +
+  geom_point(size = 3) +
+  scale_x_log10() +
+  labs(
+    title = "Adjusted Odds Ratios for Diabetes Outcome",
+    subtitle = "Each predictor is adjusted for all other retained predictors",
+    x = "Adjusted odds ratio (95% CI; log scale)",
+    y = NULL,
+    caption = paste0(
+      "Complete-case analysis: n = ", nrow(adjusted_data),
+      ". Odds ratios represent a one-unit increase in each predictor."
+    )
+  ) +
+  theme_minimal()
 
-#accuracy of model predictions
-#zero-value replacement change
-round(mean(predictTest[valid_predictions] == testSplit$Outcome[valid_predictions]) * 100)
-
-#baseline prediction
-round(
-  max(prop.table(table(testSplit$Outcome))) * 100
-)
-
-
-
-
-
-
-
-
-
-
-
+print(adjusted_effects_plot)
 
 #----------------------
 #decision tree and plot
 #----------------------
 # Decision tree
+# Keep the decision-tree training sample separate from the categorical analysis.
+set.seed(123)
+tree_index <- sample(
+  seq_len(nrow(df)),
+  size = floor(0.7 * nrow(df))
+)
+tree_training_data <- df[tree_index, , drop = FALSE]
+
 tree_model <- rpart(
   Outcome ~ .,
-  data = trainSplit,
+  data = tree_training_data,
   method = "class"
 )
 
