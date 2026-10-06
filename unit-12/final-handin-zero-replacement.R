@@ -117,11 +117,19 @@ pairs.panels(
   scale = TRUE,
   cex.cor = 2.5,
   #zero-value replacement change
-  main = paste(adjustment_caption, sep = "\n"),
+  main = paste("Overview of data"),
+  sub = paste(adjustment_caption),
   pch = 19
 )
 
-
+#Table data
+cor_table$EffectSize <- cut(
+  abs(cor_table$Kendall_tau),
+  breaks = c(-Inf, 0.1, 0.3, 0.5, Inf),
+  labels = c("Negligible", "Weak", "Moderate", "Strong")
+)
+rownames(cor_table) <- NULL
+cor_table
 
 
 
@@ -977,8 +985,6 @@ adjusted_test_table
 
 
 # Difference in glucose levels between diabetic and non-diabetic groups
-# Glucose is not normally distributed!
-
 
 # Descriptive statistics
 df %>%
@@ -991,27 +997,42 @@ df %>%
     IQR = IQR(Glucose, na.rm = TRUE)
   )
 
-# Visual comparison
-boxplot(Glucose ~ Outcome,
-        data = df,
-        names = c("Not diabetic", "Diabetic"),
-        main = "Glucose Levels by Diabetes Outcome",
-        xlab = "Diabetes Outcome",
-        ylab = "Glucose",
-        #zero-value replacement change
-        sub = adjustment_caption,
-        #zero-value replacement change
-        cex.sub = 0.55)
+# Mann–Whitney U test
+wilcox.test(
+  Glucose ~ Outcome,
+  data = df,
+  exact = FALSE
+)
 
-# Mann-Whitney U test
-wilcox.test(Glucose ~ Outcome,
-            data = df,
-            exact = FALSE)
+# Effect size
+df %>%
+  rstatix::wilcox_effsize(
+    Glucose ~ Outcome,
+    ci = TRUE
+  )
 
+# Distribution by diabetes outcome
+ggplot(df, aes(x = factor(Outcome), y = Glucose)) +
+  geom_boxplot(outlier.shape = NA, width = 0.45) +
+  geom_jitter(width = 0.12, height = 0, alpha = 0.35, size = 1.5) +
+  labs(
+    title = "Glucose Levels by Diabetes Outcome",
+    x = "Diabetes Outcome",
+    y = "Glucose",
+    caption = adjustment_caption
+  ) +
+  scale_x_discrete(
+    labels = c("0" = "Not diabetic",
+               "1" = "Diabetic")
+  ) +
+  theme_minimal() +
+  theme(
+    plot.caption = element_text(size = 7)
+  )
 
+# Difference in pregnancy counts between diabetic and non-diabetic groups
 
-#diabetease pregnacy
-# Descriptive statistics - number of pregnacies
+# Descriptive statistics
 df %>%
   group_by(Outcome) %>%
   summarise(
@@ -1022,199 +1043,38 @@ df %>%
     IQR = IQR(Pregnancies, na.rm = TRUE)
   )
 
-boxplot(
-  Pregnancies ~ Outcome,
-  data = df,
-  names = c("Not diabetic", "Diabetic"),
-  main = "Number of Pregnancies by Diabetes Outcome",
-  xlab = "Diabetes Outcome",
-  ylab = "Number of Pregnancies",
-  #zero-value replacement change
-  sub = adjustment_caption,
-  #zero-value replacement change
-  cex.sub = 0.55
-)
-
-# Calculate group means
-means <- tapply(df$Pregnancies, df$Outcome, mean, na.rm = TRUE)
-
-# Add means to boxplot
-points(
-  1:2,
-  means,
-  pch = 19
-)
-
-# Print mean values above the points
-text(
-  1:2,
-  means,
-  labels = round(means, 2),
-  pos = 3
-)
-
-#zero-value replacement change
-boxplot(
-  Pregnancies ~ Outcome,
-  data = df,
-  names = c("Not diabetic", "Diabetic"),
-  main = "Number of Pregnancies by Diabetes Outcome",
-  xlab = "Diabetes Outcome",
-  ylab = "Number of Pregnancies",
-  #zero-value replacement change
-  sub = adjustment_caption,
-  #zero-value replacement change
-  cex.sub = 0.55
-)
-
-# Calculate group means
-means <- tapply(df$Pregnancies, df$Outcome, mean, na.rm = TRUE)
-
-# Add means to boxplot
-points(
-  1:2,
-  means,
-  pch = 19
-)
-
-# Print mean values above the points
-text(
-  1:2,
-  means,
-  labels = round(means, 2),
-  pos = 3
-)
-
-
-#Mann-U Whintney test
+# Mann–Whitney U test
 wilcox.test(
   Pregnancies ~ Outcome,
   data = df,
   exact = FALSE
 )
 
+# Effect size
+df %>%
+  rstatix::wilcox_effsize(
+    Pregnancies ~ Outcome,
+    ci = TRUE
+  )
 
-#binary ever pregnany vs not
-# Was ever pregnant vs diabetes outcome
-
-pregnant_table <- table(
-  df_pregnacy$Was_pregnant,
-  df_pregnacy$Outcome
-)
-
-pregnant_table
-
-# Convert to percentages within pregnancy groups
-prop.table(pregnant_table, margin = 1) * 100
-
-# Chi-square test
-chisq.test(pregnant_table)
-
-barplot(
-  prop.table(pregnant_table, margin = 1),
-  beside = TRUE,
-  names.arg = c("Never pregnant", "Was pregnant"),
-  legend.text = c("Not diabetic", "Diabetic"),
-  main = "Diabetes Outcome by Pregnancy History",
-  xlab = "Pregnancy History",
-  ylab = "Proportion",
-  #zero-value replacement change
-  sub = adjustment_caption,
-  #zero-value replacement change
-  cex.sub = 0.55
-)
-
-
-#correlation test pregnacy number vs if ever
-
-# Pregnancy count vs diabetes outcome
-cor(
-  df$Pregnancies,
-  df$Outcome,
-  method = "spearman",
-  use = "complete.obs"
-)
-
-# Ever pregnant vs diabetes outcome
-#zero-value replacement change
-cor(
-  as.numeric(df_pregnacy$Was_pregnant),
-  as.numeric(df_pregnacy$Outcome),
-  method = "pearson",
-  use = "complete.obs"
-)
-
-
-# MODEL 1 Number of pregnancies
-#zero-value replacement change
-model_count <- glm(
-  Outcome ~ Pregnancies + Glucose + BloodPressure +
-    BMI +
-    DiabetesPedigreeFunction + Age,
-  data = df,
-  family = binomial
-)
-
-# Pregnancy effect
-exp(cbind(
-  OR = coef(model_count)["Pregnancies"],
-  confint(model_count)["Pregnancies", ]
-))
-
-
-
-# MODEL 2 Ever pregnant
-#zero-value replacement change
-model_binary <- glm(
-  Outcome ~ Was_pregnant + Glucose + BloodPressure +
-    BMI +
-    DiabetesPedigreeFunction + Age,
-  data = df_pregnacy,
-  family = binomial
-)
-
-# Ever-pregnant effect
-#zero-value replacement change
-ever_pregnant_term <- "Was_pregnantYes"
-
-exp(cbind(
-  OR = coef(model_binary)[ever_pregnant_term],
-  confint(model_binary)[ever_pregnant_term, ]
-))
-
-
-
-#visualize
-# -------------------------
-# MODEL 1: pregnancy count
-# -------------------------
-
-new_count <- data.frame(
-  Pregnancies = 0:max(df$Pregnancies, na.rm = TRUE),
-  Glucose = mean(df$Glucose, na.rm = TRUE),
-  BloodPressure = mean(df$BloodPressure, na.rm = TRUE),
-  BMI = mean(df$BMI, na.rm = TRUE),
-  DiabetesPedigreeFunction = mean(df$DiabetesPedigreeFunction, na.rm = TRUE),
-  Age = mean(df$Age, na.rm = TRUE)
-)
-
-new_count$Probability <- predict(
-  model_count,
-  newdata = new_count,
-  type = "response"
-)
-
-ggplot(new_count, aes(x = Pregnancies, y = Probability)) +
-  geom_line(linewidth = 1.2) +
-  geom_point(size = 2) +
+# Distribution by diabetes outcome
+ggplot(df, aes(x = factor(Outcome), y = Pregnancies)) +
+  geom_boxplot(outlier.shape = NA, width = 0.45) +
+  geom_jitter(width = 0.12, height = 0, alpha = 0.35, size = 1.5) +
   labs(
-    title = "Adjusted Diabetes Probability by Number of Pregnancies",
-    x = "Number of Pregnancies",
-    y = "Predicted probability of diabetes",
-    #zero-value replacement change
+    title = "Pregnancies by Diabetes Outcome",
+    x = "Diabetes Outcome",
+    y = "Number of Pregnancies",
     caption = adjustment_caption
   ) +
-  theme_minimal()
+  scale_x_discrete(
+    labels = c("0" = "Not diabetic",
+               "1" = "Diabetic")
+  ) +
+  theme_minimal() +
+  theme(
+    plot.caption = element_text(size = 7)
+  )
 
 
 
@@ -1545,7 +1405,19 @@ round(
 )
 
 
+
+
+
+
+
+
+
+
+
+
+#----------------------
 #decision tree and plot
+#----------------------
 # Decision tree
 tree_model <- rpart(
   Outcome ~ .,
@@ -1564,19 +1436,3 @@ rpart.plot(
   tweak = 1.1
 )
 
-
-
-
-
-#what is this - check later
-round(prop.table(table(df_bmi$Outcome)) * 100, 0)
-
-diabetes <- round(prop.table(table(df_bmi$Outcome)) * 100, 0)
-
-pie(diabetes,
-    labels = paste0(c("No diabetes", "Has diabetes"), ": ", diabetes, "%"),
-    main = "diabetes",
-    #zero-value replacement change
-    sub = adjustment_caption,
-    #zero-value replacement change
-    cex.sub = 0.55)
