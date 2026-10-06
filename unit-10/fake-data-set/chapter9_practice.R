@@ -1,0 +1,27 @@
+# Synthetic practice data. See README.txt for differences from the book.
+lr <- read.csv("leaf_respiration_1.csv")
+str(lr)
+summary(lr)
+plot(leafresp ~ temp, data = lr)
+m1 <- lm(leafresp ~ temp, data = lr)
+summary(m1)
+par(mfrow = c(2, 2))
+plot(m1)
+par(mfrow = c(1, 1))
+predict(m1, newdata = data.frame(temp = 15), interval = "prediction")
+
+lr2 <- read.csv("leaf_respiration_2.csv")
+m2 <- lm(leafresp2 ~ temp, data = lr2)
+par(mfrow = c(2, 2)); plot(m2)
+lr2$leafresp2_cr <- lr2$leafresp2^(1/3)
+lr2$temp_cr <- lr2$temp^(1/3)
+m3 <- lm(leafresp2_cr ~ temp_cr, data = lr2)
+plot(m3)
+
+lr3 <- read.csv("leaf_respiration_3.csv")
+m4 <- lm(leafresp ~ temp + sla + nitro, data = lr3)
+summary(m4)
+m5 <- lm(leafresp ~ temp + sla, data = lr3)
+summary(m5)
+par(mfrow = c(1, 1))
+# Continue the book using lr, lr2 and lr3. Later numeric results will differ.
