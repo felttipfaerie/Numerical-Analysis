@@ -18,6 +18,182 @@ library(dplyr)
 library(scales)
 library(rcompanion)
 
+# -----------------------------------------------------------------------------
+# PLOT STYLE AND EXPORT SETTINGS
+# Edit this section to change the appearance of every saved figure.
+# -----------------------------------------------------------------------------
+save_plots <- FALSE
+plot_output_dir <- "plots"
+if (save_plots && !dir.exists(plot_output_dir)) {
+  dir.create(plot_output_dir, recursive = TRUE)
+}
+
+plot_colours <- list(
+  primary = "#008C95",
+  secondary = "#26A69A",
+  light = "#66D9CC",
+  pale = "#B2DFDB",
+  accent = "#33BFC0",
+  deep = "#006D75",
+  darkest = "#004F55",
+  text = "#1F2937",
+  neutral = "#6B7280",
+  grid = "#DCE8E8",
+  background = "#FFFFFF"
+)
+
+outcome_yes_no_colours <- c(
+  "No" = plot_colours$light,
+  "Yes" = plot_colours$primary
+)
+
+outcome_diabetes_colours <- c(
+  "No diabetes" = plot_colours$light,
+  "Diabetes" = plot_colours$primary
+)
+
+outcome_numeric_colours <- c(
+  "0" = plot_colours$light,
+  "1" = plot_colours$primary
+)
+
+category_colours <- c(
+  plot_colours$light,
+  plot_colours$accent,
+  plot_colours$deep,
+  plot_colours$darkest
+)
+
+age_labels <- c(
+  "Under 30",
+  paste0("30", intToUtf8(0x2013), "39"),
+  paste0("40", intToUtf8(0x2013), "49"),
+  "50+"
+)
+
+age_colours <- stats::setNames(
+  c(
+    plot_colours$light,
+    plot_colours$accent,
+    plot_colours$secondary,
+    plot_colours$primary
+  ),
+  age_labels
+)
+
+association_colours <- c(
+  "Age groups" = plot_colours$light,
+  "BMI categories" = plot_colours$primary
+)
+
+model_colours <- c(
+  "main effects" = plot_colours$light,
+  "main effects + BMI x Age" = plot_colours$primary
+)
+
+plot_style <- list(
+  base_size = 13,
+  title_size = 16,
+  caption_size = 8,
+  export_dpi = 300,
+  pairs_cor_size = 1.3,
+  pairs_label_size = 0.75,
+  pairs_gap = 0.4,
+  pairs_point = plot_colours$secondary,
+  pairs_caption_size = 10,
+  mean_marker_shape = 23,
+  mean_marker_size = 3.5,
+  tree_palette = c(plot_colours$light, plot_colours$primary)
+)
+
+report_theme <- function() {
+  theme_classic(base_size = plot_style$base_size) +
+    theme(
+      plot.title = element_text(
+        face = "bold",
+        size = plot_style$title_size,
+        colour = plot_colours$text
+      ),
+      plot.subtitle = element_text(colour = plot_colours$text),
+      plot.caption = element_text(
+        size = plot_style$caption_size,
+        colour = plot_colours$neutral,
+        hjust = 0
+      ),
+      axis.title = element_text(colour = plot_colours$text),
+      axis.text = element_text(colour = plot_colours$text),
+      legend.position = "top",
+      legend.title = element_text(face = "bold"),
+      plot.margin = margin(10, 14, 16, 14)
+    )
+}
+
+base_plot_par <- function(foreground = plot_colours$text, ...) {
+  par(
+    col = foreground,
+    col.main = plot_colours$text,
+    col.lab = plot_colours$text,
+    col.axis = plot_colours$text,
+    col.sub = plot_colours$neutral,
+    fg = plot_colours$text,
+    ...
+  )
+}
+
+wrap_caption <- function(caption, width = 100) {
+  paste(strwrap(caption, width = width), collapse = "\n")
+}
+
+add_pairs_caption <- function(caption) {
+  grid::grid.text(
+    label = caption,
+    x = grid::unit(0.5, "npc"),
+    y = grid::unit(0.01, "npc"),
+    just = c("center", "bottom"),
+    gp = grid::gpar(
+      col = plot_colours$neutral,
+      fontsize = plot_style$pairs_caption_size
+    )
+  )
+}
+
+save_ggplot <- function(plot_object, filename, width = 8, height = 6) {
+  if (!save_plots) {
+    return(invisible(plot_object))
+  }
+
+  ggsave(
+    filename = file.path(plot_output_dir, paste0(filename, ".png")),
+    plot = plot_object,
+    width = width,
+    height = height,
+    units = "in",
+    dpi = plot_style$export_dpi,
+    bg = plot_colours$background,
+    device = grDevices::png,
+    type = "cairo-png"
+  )
+}
+
+save_base_plot <- function(filename, width = 8, height = 6, plot_code) {
+  if (save_plots) {
+    grDevices::png(
+      filename = file.path(plot_output_dir, paste0(filename, ".png")),
+      width = width,
+      height = height,
+      units = "in",
+      res = plot_style$export_dpi,
+      bg = plot_colours$background,
+      type = "cairo-png"
+    )
+    on.exit(grDevices::dev.off(), add = TRUE)
+  }
+
+  force(plot_code)
+}
+
+raw_data_caption <- "Raw data: zero values retained."
+
 
 akshaydattatraykhare_diabetes_dataset <- read_csv("akshaydattatraykhare-diabetes-dataset.csv")
 
@@ -41,20 +217,31 @@ colSums(df == 0)
 # Create a raw-data plot before zero values are replaced and columns are removed.
 pairs_df_before_adjustment <- df
 
-pairs.panels(
-  pairs_df_before_adjustment,
-  method = "kendall",     # correlation method
-  hist.col = "grey",      # histogram colour
-  density = TRUE,          # show density curves
-  ellipses = FALSE,        # remove correlation ellipses
-  scale = TRUE,
-  cex.cor = 2.5,
-  main = "Unedited Data Inspection: Before Zero-Value Replacement",
-  pch = 19
-)
+save_base_plot("01_raw_data_pairs", width = 12, height = 12, {
+  base_plot_par(
+    foreground = plot_style$pairs_point,
+    oma = c(2.4, 0, 2, 0)
+  )
+  pairs.panels(
+    pairs_df_before_adjustment,
+    method = "kendall",     # correlation method
+    hist.col = plot_colours$pale,
+    hist.border = plot_colours$primary,
+    line.col = plot_colours$primary,
+    density = TRUE,          # show density curves
+    ellipses = FALSE,        # remove correlation ellipses
+    scale = TRUE,
+    cex.cor = plot_style$pairs_cor_size,
+    cex.labels = plot_style$pairs_label_size,
+    gap = plot_style$pairs_gap,
+    main = "Unedited Data Inspection: Before Zero-Value Replacement",
+    pch = 19
+  )
+  add_pairs_caption(raw_data_caption)
+})
 
 #full summary table
-# Function to calculate mode
+# Function to calculate model
 get_mode <- function(x) {
   x <- na.omit(x)
   ux <- unique(x)
@@ -108,19 +295,29 @@ num_cols <- names(df)[sapply(df, is.numeric)]
 # Create temporary copy for plotting
 pairs_df <- df
 
-pairs.panels(
-  pairs_df,
-  method = "kendall",     # correlation method
-  hist.col = "grey",      # histogram colour
-  density = TRUE,         # show density curves
-  ellipses = FALSE,       # remove correlation ellipses
-  scale = TRUE,
-  cex.cor = 2.5,
-  #zero-value replacement change
-  main = paste("Overview of data"),
-  sub = paste(adjustment_caption),
-  pch = 19
-)
+save_base_plot("02_adjusted_data_pairs", width = 12, height = 12, {
+  base_plot_par(
+    foreground = plot_style$pairs_point,
+    oma = c(2.4, 0, 2, 0)
+  )
+  pairs.panels(
+    pairs_df,
+    method = "kendall",     # correlation method
+    hist.col = plot_colours$pale,
+    hist.border = plot_colours$primary,
+    line.col = plot_colours$primary,
+    density = TRUE,         # show density curves
+    ellipses = FALSE,       # remove correlation ellipses
+    scale = TRUE,
+    cex.cor = plot_style$pairs_cor_size,
+    cex.labels = plot_style$pairs_label_size,
+    gap = plot_style$pairs_gap,
+    #zero-value replacement change
+    main = paste("Overview of data"),
+    pch = 19
+  )
+  add_pairs_caption(adjustment_caption)
+})
 
 # Kendall's tau for each predictor against the binary diabetes outcome.
 # Building this table here makes the script reproducible in a fresh R session.
@@ -157,32 +354,40 @@ cor_table
 
 
 
-#zero-value replacement change
-par(mfrow = c(3, 3), oma = c(2, 0, 0, 0))
-
-for (col in num_cols) {
-  
-  x <- df[[col]]
-  
+save_base_plot("03_predictor_histograms", width = 10, height = 8, {
   #zero-value replacement change
-  x <- na.omit(x)
-  
-  # Add * to labels where zero values were removed
-  label <- ifelse(col %in% zero_remove, paste0(col, "*"), col)
-  
-  hist(
-    x,
-    main = label,
-    xlab = label,
-    breaks = 20
+  base_plot_par(mfrow = c(3, 3), oma = c(2, 0, 0, 0))
+
+  for (col in num_cols) {
+
+    x <- df[[col]]
+
+    #zero-value replacement change
+    x <- na.omit(x)
+
+    # Add * to labels where zero values were removed
+    label <- ifelse(col %in% zero_remove, paste0(col, "*"), col)
+
+    hist(
+      x,
+      main = label,
+      xlab = label,
+      breaks = 20,
+      col = plot_colours$pale,
+      border = plot_colours$primary
+    )
+  }
+
+  #zero-value replacement change
+  mtext(
+    adjustment_caption,
+    side = 1,
+    outer = TRUE,
+    line = 0.5,
+    cex = 0.75,
+    col = plot_colours$neutral
   )
-}
-
-#zero-value replacement change
-mtext(adjustment_caption, side = 1, outer = TRUE, line = 0.5, cex = 0.75)
-
-#zero-value replacement change
-par(mfrow = c(1, 1), oma = c(0, 0, 0, 0))
+})
 
 
 
@@ -260,24 +465,29 @@ plot_df <- numeric_df
 # Remove binary outcome variable
 plot_df$Outcome <- NULL
 
-par(mar = c(6, 11, 4, 2) + 0.1)
+save_base_plot("04_predictor_boxplots", width = 10, height = 7, {
+  base_plot_par(mar = c(6, 11, 4, 2) + 0.1)
 
-boxplot(
-  plot_df,
-  main = "Boxplots of Predictors",
-  horizontal = TRUE,
-  las = 1,
-  xlab = "Value",
-  ylab = "",
-  cex.axis = 0.8
-)
+  boxplot(
+    plot_df,
+    main = "Boxplots of Predictors",
+    horizontal = TRUE,
+    las = 1,
+    xlab = "Value",
+    ylab = "",
+    cex.axis = 0.8,
+    col = plot_colours$pale,
+    border = plot_colours$primary
+  )
 
-mtext(
-  adjustment_caption,
-  side = 1,
-  line = 5,
-  cex = 0.55
-)
+  mtext(
+    adjustment_caption,
+    side = 1,
+    line = 5,
+    cex = 0.55,
+    col = plot_colours$neutral
+  )
+})
 
 
 # Shapiro–Wilk normality test
@@ -327,26 +537,30 @@ for (col in names(df)) {
 # % of people with diabetes vs not
 diabetes <- round(prop.table(table(df$Outcome)) * 100, 2)
 
-barplot(
-  diabetes,
-  names.arg = c("No Diabetes", "Has Diabetes"),
-  main = "% of Individuals with Diabetes",
-  ylab = "Percentage (%)",
-  col = c("#B2DFDB", "#26A69A"),
-  border = NA,
-  #zero-value replacement change
-  sub = adjustment_caption,
-  #zero-value replacement change
-  cex.sub = 0.55,
-  ylim = c(0, 100)
-)
+save_base_plot("05_diabetes_prevalence", width = 8, height = 6, {
+  base_plot_par()
+  barplot(
+    diabetes,
+    names.arg = c("No Diabetes", "Has Diabetes"),
+    main = "% of Individuals with Diabetes",
+    ylab = "Percentage (%)",
+    col = outcome_numeric_colours,
+    border = NA,
+    #zero-value replacement change
+    sub = adjustment_caption,
+    #zero-value replacement change
+    cex.sub = 0.55,
+    ylim = c(0, 100)
+  )
 
-# Add percentage labels above bars
-text(
-  x = c(0.7, 1.9),
-  y = diabetes + 3,
-  labels = paste0(diabetes, "%")
-)
+  # Add percentage labels above bars
+  text(
+    x = c(0.7, 1.9),
+    y = diabetes + 3,
+    labels = paste0(diabetes, "%"),
+    col = plot_colours$text
+  )
+})
 
 
 #age distribution
@@ -364,18 +578,21 @@ h <- hist(
 
 h$counts <- h$counts / sum(h$counts) * 100
 
-plot(
-  h,
-  main = "Age Distribution",
-  xlab = "Age",
-  ylab = "Percentage (%)",
-  col = "#26A69A",
-  #zero-value replacement change
-  sub = adjustment_caption,
-  #zero-value replacement change
-  cex.sub = 0.55,
-  border = "#B2DFDB"
-)
+save_base_plot("06_age_distribution", width = 8, height = 6, {
+  base_plot_par()
+  plot(
+    h,
+    main = "Age Distribution",
+    xlab = "Age",
+    ylab = "Percentage (%)",
+    col = plot_colours$secondary,
+    #zero-value replacement change
+    sub = adjustment_caption,
+    #zero-value replacement change
+    cex.sub = 0.55,
+    border = plot_colours$pale
+  )
+})
 
 
 
@@ -393,27 +610,31 @@ df_pregnacy$Pregnancies <- NULL
 preg_table <- table(df_pregnacy$Was_pregnant)
 preg_pct <- prop.table(preg_table) * 100
 
-bp <- barplot(
-  preg_pct,
-  names.arg = c("Never Pregnant", "Was Pregnant"),
-  main = "Pregnancy History",
-  xlab = "Pregnancy History",
-  ylab = "Percentage (%)",
-  col = "#26A69A",
-  border = "#B2DFDB",
-  #zero-value replacement change
-  sub = adjustment_caption,
-  #zero-value replacement change
-  cex.sub = 0.55,
-  ylim = c(0, 100)
-)
+save_base_plot("07_pregnancy_history", width = 8, height = 6, {
+  base_plot_par()
+  bp <- barplot(
+    preg_pct,
+    names.arg = c("Never Pregnant", "Was Pregnant"),
+    main = "Pregnancy History",
+    xlab = "Pregnancy History",
+    ylab = "Percentage (%)",
+    col = plot_colours$secondary,
+    border = plot_colours$pale,
+    #zero-value replacement change
+    sub = adjustment_caption,
+    #zero-value replacement change
+    cex.sub = 0.55,
+    ylim = c(0, 100)
+  )
 
-text(
-  x = bp,
-  y = preg_pct,
-  labels = paste0(round(preg_pct, 1), "%"),
-  pos = 3
-)
+  text(
+    x = bp,
+    y = preg_pct,
+    labels = paste0(round(preg_pct, 1), "%"),
+    pos = 3,
+    col = plot_colours$text
+  )
+})
 
 #inspect new dataset
 summary(df_pregnacy)
@@ -456,7 +677,7 @@ df_pregnacy$Outcome <- factor(
   labels = c("No", "Yes")
 )
 
-ggplot(df_pregnacy, aes(x = Was_pregnant, fill = Outcome)) +
+pregnancy_outcome_plot <- ggplot(df_pregnacy, aes(x = Was_pregnant, fill = Outcome)) +
   geom_bar(position = "fill", width = 0.65) +
   geom_text(
     stat = "count",
@@ -469,7 +690,7 @@ ggplot(df_pregnacy, aes(x = Was_pregnant, fill = Outcome)) +
       )
     ),
     position = position_fill(vjust = 0.5),
-    colour = "white",
+    colour = plot_colours$background,
     fontface = "bold"
   ) +
   scale_y_continuous(
@@ -477,7 +698,7 @@ ggplot(df_pregnacy, aes(x = Was_pregnant, fill = Outcome)) +
     expand = c(0, 0)
   ) +
   scale_fill_manual(
-    values = c("#66D9CC", "#008C95"),
+    values = outcome_yes_no_colours,
     name = "Diabetic"
   ) +
   labs(
@@ -487,11 +708,13 @@ ggplot(df_pregnacy, aes(x = Was_pregnant, fill = Outcome)) +
     #zero-value replacement change
     caption = adjustment_caption
   ) +
-  theme_classic(base_size = 13) +
-  theme(
-    plot.title = element_text(face = "bold", size = 16),
-    legend.position = "top"
-  )
+  report_theme()
+
+print(pregnancy_outcome_plot)
+save_ggplot(
+  pregnancy_outcome_plot,
+  "08_diabetes_by_previous_pregnancy"
+)
 
 
 
@@ -529,12 +752,7 @@ df_age_bmi$age_cat <- ordered(
   cut(
     df_age_bmi$Age,
     breaks = c(-Inf, 30, 40, 50, Inf),
-    labels = c(
-      "Under 30",
-      "30–39",
-      "40–49",
-      "50+"
-    ),
+    labels = age_labels,
     right = FALSE
   )
 )
@@ -623,7 +841,7 @@ df_age_plot <- as.data.frame(tab_age)
 
 colnames(df_age_plot) <- c("Age", "Outcome", "Count")
 
-ggplot(df_age_plot, aes(x = Age, y = Count, fill = Outcome)) +
+age_outcome_plot <- ggplot(df_age_plot, aes(x = Age, y = Count, fill = Outcome)) +
   geom_col(
     position = "fill",
     width = 0.65
@@ -639,7 +857,7 @@ ggplot(df_age_plot, aes(x = Age, y = Count, fill = Outcome)) +
       )
     ),
     position = position_fill(vjust = 0.5),
-    colour = "white",
+    colour = plot_colours$background,
     fontface = "bold"
   ) +
   scale_y_continuous(
@@ -647,7 +865,7 @@ ggplot(df_age_plot, aes(x = Age, y = Count, fill = Outcome)) +
     expand = c(0, 0)
   ) +
   scale_fill_manual(
-    values = c("#66D9CC", "#008C95"),
+    values = outcome_numeric_colours,
     name = "Diabetic"
   ) +
   labs(
@@ -656,14 +874,10 @@ ggplot(df_age_plot, aes(x = Age, y = Count, fill = Outcome)) +
     y = "Percentage",
     caption = adjustment_caption
   ) +
-  theme_classic(base_size = 13) +
-  theme(
-    plot.title = element_text(
-      face = "bold",
-      size = 16
-    ),
-    legend.position = "top"
-  )
+  report_theme()
+
+print(age_outcome_plot)
+save_ggplot(age_outcome_plot, "09_diabetes_by_age_category")
 
 
 # PREGNANCY
@@ -672,7 +886,10 @@ df_pregnancy_plot <- as.data.frame(tab_pregnancy)
 
 colnames(df_pregnancy_plot) <- c("Pregnancy", "Outcome", "Count")
 
-ggplot(df_pregnancy_plot, aes(x = Pregnancy, y = Count, fill = Outcome)) +
+pregnancy_category_outcome_plot <- ggplot(
+  df_pregnancy_plot,
+  aes(x = Pregnancy, y = Count, fill = Outcome)
+) +
   geom_col(
     position = "fill",
     width = 0.65
@@ -688,7 +905,7 @@ ggplot(df_pregnancy_plot, aes(x = Pregnancy, y = Count, fill = Outcome)) +
       )
     ),
     position = position_fill(vjust = 0.5),
-    colour = "white",
+    colour = plot_colours$background,
     fontface = "bold"
   ) +
   scale_y_continuous(
@@ -696,7 +913,7 @@ ggplot(df_pregnancy_plot, aes(x = Pregnancy, y = Count, fill = Outcome)) +
     expand = c(0, 0)
   ) +
   scale_fill_manual(
-    values = c("#66D9CC", "#008C95"),
+    values = outcome_numeric_colours,
     name = "Diabetic"
   ) +
   labs(
@@ -705,14 +922,13 @@ ggplot(df_pregnancy_plot, aes(x = Pregnancy, y = Count, fill = Outcome)) +
     y = "Percentage",
     caption = adjustment_caption
   ) +
-  theme_classic(base_size = 13) +
-  theme(
-    plot.title = element_text(
-      face = "bold",
-      size = 16
-    ),
-    legend.position = "top"
-  )
+  report_theme()
+
+print(pregnancy_category_outcome_plot)
+save_ggplot(
+  pregnancy_category_outcome_plot,
+  "10_diabetes_by_pregnancy_category"
+)
 
 
 
@@ -722,31 +938,45 @@ df_bmi_plot <- as.data.frame(tab_bmi)
 
 colnames(df_bmi_plot) <- c("BMI", "Outcome", "Count")
 
-ggplot(df_bmi_plot, aes(x = BMI, y = Count, fill = Outcome)) +
+bmi_outcome_plot <- ggplot(df_bmi_plot, aes(x = BMI, y = Count, fill = Outcome)) +
   geom_col(
     position = "fill",
     width = 0.65
   ) +
   geom_text(
     aes(
-      label = paste0(
-        sprintf(
-          "%.2f",
-          Count / ave(Count, BMI, FUN = sum) * 100
-        ),
-        "%"
+      label = ifelse(
+        Count == 0,
+        "",
+        paste0(
+          sprintf(
+            "%.2f",
+            Count / ave(Count, BMI, FUN = sum) * 100
+          ),
+          "%"
+        )
       )
     ),
     position = position_fill(vjust = 0.5),
-    colour = "white",
+    colour = plot_colours$background,
     fontface = "bold"
+  ) +
+  geom_text(
+    data = dplyr::filter(df_bmi_plot, Count == 0),
+    aes(x = BMI, y = 0.02),
+    label = "0.00%",
+    inherit.aes = FALSE,
+    colour = plot_colours$text,
+    fontface = "bold",
+    size = 3.2,
+    vjust = 0
   ) +
   scale_y_continuous(
     labels = scales::percent_format(),
     expand = c(0, 0)
   ) +
   scale_fill_manual(
-    values = c("#66D9CC", "#008C95"),
+    values = outcome_numeric_colours,
     name = "Diabetic"
   ) +
   labs(
@@ -755,14 +985,10 @@ ggplot(df_bmi_plot, aes(x = BMI, y = Count, fill = Outcome)) +
     y = "Percentage",
     caption = adjustment_caption
   ) +
-  theme_classic(base_size = 13) +
-  theme(
-    plot.title = element_text(
-      face = "bold",
-      size = 16
-    ),
-    legend.position = "top"
-  )
+  report_theme()
+
+print(bmi_outcome_plot)
+save_ggplot(bmi_outcome_plot, "11_diabetes_by_bmi_category")
 
 
 
@@ -1036,9 +1262,20 @@ df %>%
   )
 
 # Distribution by diabetes outcome
-ggplot(df, aes(x = factor(Outcome), y = Glucose)) +
-  geom_boxplot(outlier.shape = NA, width = 0.45) +
-  geom_jitter(width = 0.12, height = 0, alpha = 0.35, size = 1.5) +
+glucose_outcome_plot <- ggplot(df, aes(x = factor(Outcome), y = Glucose)) +
+  geom_boxplot(
+    outlier.shape = NA,
+    width = 0.45,
+    fill = plot_colours$pale,
+    colour = plot_colours$primary
+  ) +
+  geom_jitter(
+    width = 0.12,
+    height = 0,
+    alpha = 0.35,
+    size = 1.5,
+    colour = plot_colours$primary
+  ) +
   labs(
     title = "Glucose Levels by Diabetes Outcome",
     x = "Diabetes Outcome",
@@ -1049,10 +1286,10 @@ ggplot(df, aes(x = factor(Outcome), y = Glucose)) +
     labels = c("0" = "Not diabetic",
                "1" = "Diabetic")
   ) +
-  theme_minimal() +
-  theme(
-    plot.caption = element_text(size = 7)
-  )
+  report_theme()
+
+print(glucose_outcome_plot)
+save_ggplot(glucose_outcome_plot, "12_glucose_by_diabetes_outcome")
 
 # Difference in pregnancy counts between diabetic and non-diabetic groups
 
@@ -1082,9 +1319,23 @@ df %>%
   )
 
 # Distribution by diabetes outcome
-ggplot(df, aes(x = factor(Outcome), y = Pregnancies)) +
-  geom_boxplot(outlier.shape = NA, width = 0.45) +
-  geom_jitter(width = 0.12, height = 0, alpha = 0.35, size = 1.5) +
+pregnancies_outcome_plot <- ggplot(
+  df,
+  aes(x = factor(Outcome), y = Pregnancies)
+) +
+  geom_boxplot(
+    outlier.shape = NA,
+    width = 0.45,
+    fill = plot_colours$pale,
+    colour = plot_colours$primary
+  ) +
+  geom_jitter(
+    width = 0.12,
+    height = 0,
+    alpha = 0.35,
+    size = 1.5,
+    colour = plot_colours$primary
+  ) +
   labs(
     title = "Pregnancies by Diabetes Outcome",
     x = "Diabetes Outcome",
@@ -1095,10 +1346,10 @@ ggplot(df, aes(x = factor(Outcome), y = Pregnancies)) +
     labels = c("0" = "Not diabetic",
                "1" = "Diabetic")
   ) +
-  theme_minimal() +
-  theme(
-    plot.caption = element_text(size = 7)
-  )
+  report_theme()
+
+print(pregnancies_outcome_plot)
+save_ggplot(pregnancies_outcome_plot, "13_pregnancies_by_diabetes_outcome")
 
 
 #----------------
@@ -1117,15 +1368,12 @@ plot_category <- function(data, variable, title) {
       aes(label = after_stat(count)),
       vjust = -0.35,
       fontface = "bold",
-      size = 5
+      size = 5,
+      colour = plot_colours$text
     ) +
     scale_fill_manual(
-      values = c(
-        "#66D9CC",
-        "#008C95",
-        "#006D75",
-        "#004F55"
-      ),
+      values = category_colours,
+      na.value = plot_colours$neutral,
       guide = "none"
     ) +
     scale_y_continuous(
@@ -1137,16 +1385,8 @@ plot_category <- function(data, variable, title) {
       y = "Count",
       caption = adjustment_caption
     ) +
-    theme_classic(base_size = 13) +
-    theme(
-      plot.title = element_text(
-        face = "bold",
-        size = 16
-      ),
-      axis.text.x = element_text(
-        size = 12
-      )
-    )
+    report_theme() +
+    theme(axis.text.x = element_text(size = 12))
 }
 
 bmi_category_plot <- plot_category(
@@ -1170,6 +1410,9 @@ pregnancy_category_plot <- plot_category(
 print(bmi_category_plot)
 print(age_category_plot)
 print(pregnancy_category_plot)
+save_ggplot(bmi_category_plot, "14_bmi_category_distribution")
+save_ggplot(age_category_plot, "15_age_category_distribution")
+save_ggplot(pregnancy_category_plot, "16_pregnancy_category_distribution")
 
 
 # Correlation of diabetes outcome with the existing age and BMI categories
@@ -1218,13 +1461,11 @@ category_correlation_plot <- ggplot(
     aes(label = sprintf("%.3f", `Kendall tau-b`)),
     vjust = -0.35,
     fontface = "bold",
-    size = 5
+    size = 5,
+    colour = plot_colours$text
   ) +
   scale_fill_manual(
-    values = c(
-      "Age (groups)" = "#66D9CC",
-      "BMI (categories)" = "#008C95"
-    ),
+    values = association_colours,
     guide = "none"
   ) +
   scale_y_continuous(
@@ -1238,18 +1479,11 @@ category_correlation_plot <- ggplot(
     y = "Kendall's tau-b",
     caption = adjustment_caption
   ) +
-  theme_classic(base_size = 13) +
-  theme(
-    plot.title = element_text(
-      face = "bold",
-      size = 16
-    ),
-    axis.text.x = element_text(
-      size = 12
-    )
-  )
+  report_theme() +
+  theme(axis.text.x = element_text(size = 12))
 
 print(category_correlation_plot)
+save_ggplot(category_correlation_plot, "17_category_outcome_association")
 
 
 #--------
@@ -1344,14 +1578,6 @@ print(
 
 #plot visuals for age glucose
 
-# Matching colours for age categories
-age_colours <- c(
-  "Under 30" = "#66D9CC",
-  "30–39"    = "#33BFC0",
-  "40–49"    = "#169FA8",
-  "50+"      = "#008C95"
-)
-
 # --------
 # Boxplot: Glucose by age category
 # --------
@@ -1363,6 +1589,17 @@ glucose_age_boxplot <- ggplot(
   geom_boxplot(
     width = 0.6,
     alpha = 0.85,
+    colour = plot_colours$deep,
+    na.rm = TRUE
+  ) +
+  stat_summary(
+    fun = mean,
+    geom = "point",
+    shape = plot_style$mean_marker_shape,
+    size = plot_style$mean_marker_size,
+    fill = plot_colours$background,
+    colour = plot_colours$darkest,
+    stroke = 1,
     na.rm = TRUE
   ) +
   scale_fill_manual(
@@ -1372,20 +1609,14 @@ glucose_age_boxplot <- ggplot(
   labs(
     title = "Glucose Level by Age Category",
     x = "Age category",
-    y = "Glucose level"
+    y = "Glucose level",
+    caption = adjustment_caption
   ) +
-  theme_classic(base_size = 13) +
-  theme(
-    plot.title = element_text(
-      face = "bold",
-      size = 16
-    ),
-    axis.text.x = element_text(
-      size = 12
-    )
-  )
+  report_theme() +
+  theme(axis.text.x = element_text(size = 12))
 
 print(glucose_age_boxplot)
+save_ggplot(glucose_age_boxplot, "18_glucose_by_age_category_boxplot")
 
 
 # --------
@@ -1399,13 +1630,25 @@ glucose_age_violin <- ggplot(
   geom_violin(
     trim = FALSE,
     alpha = 0.85,
+    colour = plot_colours$deep,
     na.rm = TRUE
   ) +
   geom_boxplot(
     width = 0.12,
-    fill = "white",
+    fill = plot_colours$background,
     alpha = 0.8,
+    colour = plot_colours$deep,
     outlier.shape = NA,
+    na.rm = TRUE
+  ) +
+  stat_summary(
+    fun = mean,
+    geom = "point",
+    shape = plot_style$mean_marker_shape,
+    size = plot_style$mean_marker_size,
+    fill = plot_colours$background,
+    colour = plot_colours$darkest,
+    stroke = 1,
     na.rm = TRUE
   ) +
   scale_fill_manual(
@@ -1415,20 +1658,14 @@ glucose_age_violin <- ggplot(
   labs(
     title = "Glucose Level by Age Category",
     x = "Age category",
-    y = "Glucose level"
+    y = "Glucose level",
+    caption = adjustment_caption
   ) +
-  theme_classic(base_size = 13) +
-  theme(
-    plot.title = element_text(
-      face = "bold",
-      size = 16
-    ),
-    axis.text.x = element_text(
-      size = 12
-    )
-  )
+  report_theme() +
+  theme(axis.text.x = element_text(size = 12))
 
 print(glucose_age_violin)
+save_ggplot(glucose_age_violin, "19_glucose_by_age_category_violin")
 
 
 
@@ -1455,6 +1692,12 @@ zero_to_na <- c(
   "BMI",
   "DiabetesPedigreeFunction",
   "Age"
+)
+
+lm_adjustment_caption <- paste0(
+  "Zero values treated as missing for: ",
+  paste(zero_to_na, collapse = ", "),
+  "."
 )
 
 # Replace 0 with NA in these variables only
@@ -1548,12 +1791,25 @@ coef(summary(glucose_model))
 
 #make a nice plot
 # Show all four regression diagnostic plots on one sheet
-par(mfrow = c(2, 2))
+save_base_plot("20_glucose_linear_model_diagnostics", width = 10, height = 8, {
+  base_plot_par(mfrow = c(2, 2), oma = c(2.4, 0, 0, 0))
 
-plot(glucose_model)
+  plot(
+    glucose_model,
+    col = plot_colours$primary,
+    col.smooth = plot_colours$primary,
+    col.id = plot_colours$primary
+  )
 
-# Reset plotting layout afterwards
-par(mfrow = c(1, 1))
+  mtext(
+    lm_adjustment_caption,
+    side = 1,
+    outer = TRUE,
+    line = 0.5,
+    cex = 0.7,
+    col = plot_colours$neutral
+  )
+})
 
 
 
@@ -1763,27 +2019,37 @@ adjusted_effects_plot <- ggplot(
   adjusted_effects,
   aes(x = estimate, y = reorder(Predictor, estimate))
 ) +
-  geom_vline(xintercept = 1, linetype = "dashed", colour = "grey40") +
+  geom_vline(
+    xintercept = 1,
+    linetype = "dashed",
+    colour = plot_colours$neutral
+  ) +
   geom_errorbar(
     aes(xmin = conf.low, xmax = conf.high),
     width = 0.18,
-    orientation = "y"
+    orientation = "y",
+    colour = plot_colours$primary
   ) +
-  geom_point(size = 3) +
+  geom_point(size = 3, colour = plot_colours$primary) +
   scale_x_log10() +
   labs(
     title = "Adjusted Odds Ratios for Diabetes Outcome",
     subtitle = "Each predictor is adjusted for all other retained predictors",
     x = "Adjusted odds ratio (95% CI; log scale)",
     y = NULL,
-    caption = paste0(
-      "Complete-case analysis: n = ", nrow(adjusted_data),
-      ". Odds ratios represent a one-unit increase in each predictor."
+    caption = wrap_caption(
+      paste0(
+        "Complete-case analysis: n = ", nrow(adjusted_data),
+        ". Odds ratios represent a one-unit increase in each predictor. ",
+        adjustment_caption
+      ),
+      width = 90
     )
   ) +
-  theme_minimal()
+  report_theme()
 
 print(adjusted_effects_plot)
+save_ggplot(adjusted_effects_plot, "21_adjusted_odds_ratios")
 
 
 
@@ -1935,16 +2201,6 @@ bag_violin_data$Predictor <- factor(
 
 
 #----------------------
-# Matching teal colours
-#----------------------
-
-outcome_colours <- c(
-  "No diabetes" = "#66D9CC",
-  "Diabetes"    = "#008C95"
-)
-
-
-#----------------------
 # Violin plot
 #----------------------
 
@@ -1958,31 +2214,38 @@ bag_violin_plot <- ggplot(
 ) +
   geom_violin(
     trim = FALSE,
-    alpha = 0.7
+    alpha = 0.7,
+    colour = plot_colours$deep
   ) +
   geom_boxplot(
     width = 0.15,
     outlier.shape = NA,
-    alpha = 0.7
+    alpha = 0.7,
+    colour = plot_colours$deep
   ) +
   facet_wrap(
     ~ Predictor,
     scales = "free_y"
   ) +
   scale_fill_manual(
-    values = outcome_colours
+    values = outcome_diabetes_colours
   ) +
   labs(
     title = "Distribution of BMI, Age and Glucose by Diabetes Outcome",
     x = "Diabetes outcome",
     y = "Value",
     fill = "Outcome",
-    caption = paste0(
-      "Complete-case analysis: n = ",
-      nrow(bag_data)
+    caption = wrap_caption(
+      paste0(
+        "Complete-case analysis: n = ",
+        nrow(bag_data),
+        ". ",
+        adjustment_caption
+      ),
+      width = 90
     )
   ) +
-  theme_minimal() +
+  report_theme() +
   theme(
     legend.position = "none"
   )
@@ -1990,6 +2253,7 @@ bag_violin_plot <- ggplot(
 print(
   bag_violin_plot
 )
+save_ggplot(bag_violin_plot, "22_bag_predictor_distributions")
 
 #----plot to review
 #----------------------
@@ -2015,26 +2279,31 @@ bag_residual_plot <- ggplot(
     x = Fitted,
     y = DevianceResidual
   )
-) +
+  ) +
   geom_point(
-    alpha = 0.5
+    alpha = 0.5,
+    colour = plot_colours$primary
   ) +
   geom_smooth(
     method = "loess",
-    se = FALSE
+    se = FALSE,
+    colour = plot_colours$secondary
   ) +
   geom_hline(
     yintercept = 0,
-    linetype = "dashed"
+    linetype = "dashed",
+    colour = plot_colours$neutral
   ) +
   labs(
     title = "Residuals vs Fitted",
     x = "Predicted probability",
-    y = "Deviance residual"
+    y = "Deviance residual",
+    caption = adjustment_caption
   ) +
-  theme_minimal()
+  report_theme()
 
 print(bag_residual_plot)
+save_ggplot(bag_residual_plot, "23_bag_residuals_vs_fitted")
 
 
 #----------------------
@@ -2310,12 +2579,7 @@ print(bmi_age_preg_model_comparison, row.names = FALSE)
 # Predicted probabilities from Model 2 illustrate the BMI x Age interaction.
 # Use the same age categories and colours as the earlier age-category plots.
 # The model treats Age continuously, so each curve uses its category's median age.
-bmi_age_preg_age_labels <- c(
-  "Under 30",
-  "30–39",
-  "40–49",
-  "50+"
-)
+bmi_age_preg_age_labels <- age_labels
 
 bmi_age_preg_age_reference <- data.frame(
   Age = bmi_age_preg_comparison_data$Age,
@@ -2398,18 +2662,20 @@ bmi_age_preg_interaction_plot <- ggplot(
     x = "BMI",
     y = "Predicted probability of diabetes",
     colour = "Age category",
-    caption = paste0(
-      "Glucose and Pregnancies held at their medians; Age is continuous in the model; n = ",
-      nrow(bmi_age_preg_comparison_data)
+    caption = wrap_caption(
+      paste0(
+        "Glucose and Pregnancies held at their medians; Age is continuous in the model; n = ",
+        nrow(bmi_age_preg_comparison_data),
+        ". ",
+        adjustment_caption
+      ),
+      width = 90
     )
   ) +
-  theme_classic(base_size = 13) +
-  theme(
-    plot.title = element_text(face = "bold", size = 16),
-    legend.position = "top"
-  )
+  report_theme()
 
 print(bmi_age_preg_interaction_plot)
+save_ggplot(bmi_age_preg_interaction_plot, "24_bmi_age_interaction")
 
 
 # Compare model classification performance with stratified 10-fold validation.
@@ -2541,13 +2807,11 @@ bmi_age_preg_cv_performance_plot <- ggplot(
     aes(label = scales::percent(Value, accuracy = 0.1)),
     position = position_dodge(width = 0.75),
     vjust = -0.35,
-    size = 3.8
+    size = 3.8,
+    colour = plot_colours$text
   ) +
   scale_fill_manual(
-    values = c(
-      "Model 1: main effects" = "#66D9CC",
-      "Model 2: main effects + BMI x Age" = "#008C95"
-    )
+    values = model_colours
   ) +
   scale_y_continuous(
     labels = scales::percent_format(accuracy = 1),
@@ -2559,14 +2823,12 @@ bmi_age_preg_cv_performance_plot <- ggplot(
     x = NULL,
     y = "Performance",
     fill = "Model",
+    caption = adjustment_caption
   ) +
-  theme_classic(base_size = 13) +
-  theme(
-    plot.title = element_text(face = "bold", size = 16),
-    legend.position = "top"
-  )
+  report_theme()
 
 print(bmi_age_preg_cv_performance_plot)
+save_ggplot(bmi_age_preg_cv_performance_plot, "25_ten_fold_cv_performance")
 
 
 
@@ -2591,13 +2853,25 @@ tree_model <- rpart(
 )
 
 # Nice tree plot
-rpart.plot(
-  tree_model,
-  type = 4,
-  extra = 104,
-  fallen.leaves = TRUE,
-  #zero-value replacement change
-  main = paste("Decision Tree", adjustment_caption, sep = "\n"),
-  tweak = 1.1
-)
+save_base_plot("26_decision_tree", width = 12, height = 9, {
+  base_plot_par(oma = c(2.4, 0, 0, 0))
+  rpart.plot(
+    tree_model,
+    type = 4,
+    extra = 104,
+    fallen.leaves = TRUE,
+    box.palette = plot_style$tree_palette,
+    #zero-value replacement change
+    main = "Decision Tree",
+    tweak = 1.1
+  )
+  mtext(
+    adjustment_caption,
+    side = 1,
+    outer = TRUE,
+    line = 0.5,
+    cex = 0.7,
+    col = plot_colours$neutral
+  )
+})
 
