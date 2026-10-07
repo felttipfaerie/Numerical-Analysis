@@ -863,6 +863,9 @@ pregnancies_bmi_age$Outcome <- as.numeric(
 )
 
 
+
+
+
 # ------------------------------------------------------------
 # 1. Multivariable logistic regression
 # ------------------------------------------------------------
@@ -1284,10 +1287,403 @@ glucose_age_correlation_table <- data.frame(
 
 print(glucose_age_correlation_table, row.names = FALSE)
 
+#table output
+# --------
+# Glucose summary by age category
+# --------
+
+glucose_age_summary <- do.call(
+  rbind,
+  lapply(
+    split(
+      pregnancies_bmi_age$Glucose,
+      pregnancies_bmi_age$age_cat
+    ),
+    function(x) {
+      data.frame(
+        n = sum(!is.na(x)),
+        mean = mean(x, na.rm = TRUE),
+        sd = sd(x, na.rm = TRUE),
+        median = median(x, na.rm = TRUE),
+        Q1 = quantile(x, 0.25, na.rm = TRUE),
+        Q3 = quantile(x, 0.75, na.rm = TRUE),
+        IQR = IQR(x, na.rm = TRUE)
+      )
+    }
+  )
+)
+
+glucose_age_summary$Age_group <- rownames(glucose_age_summary)
+
+rownames(glucose_age_summary) <- NULL
+
+glucose_age_summary <- glucose_age_summary[
+  ,
+  c(
+    "Age_group",
+    "n",
+    "mean",
+    "sd",
+    "median",
+    "Q1",
+    "Q3",
+    "IQR"
+  )
+]
+
+glucose_age_summary[, -1] <- round(
+  glucose_age_summary[, -1],
+  2
+)
+
+print(
+  glucose_age_summary,
+  row.names = FALSE
+)
+
+
+#plot visuals for age glucose
+
+# Matching colours for age categories
+age_colours <- c(
+  "Under 30" = "#66D9CC",
+  "30–39"    = "#33BFC0",
+  "40–49"    = "#169FA8",
+  "50+"      = "#008C95"
+)
+
+# --------
+# Boxplot: Glucose by age category
+# --------
+
+glucose_age_boxplot <- ggplot(
+  pregnancies_bmi_age,
+  aes(x = age_cat, y = Glucose, fill = age_cat)
+) +
+  geom_boxplot(
+    width = 0.6,
+    alpha = 0.85,
+    na.rm = TRUE
+  ) +
+  scale_fill_manual(
+    values = age_colours,
+    guide = "none"
+  ) +
+  labs(
+    title = "Glucose Level by Age Category",
+    x = "Age category",
+    y = "Glucose level"
+  ) +
+  theme_classic(base_size = 13) +
+  theme(
+    plot.title = element_text(
+      face = "bold",
+      size = 16
+    ),
+    axis.text.x = element_text(
+      size = 12
+    )
+  )
+
+print(glucose_age_boxplot)
+
+
+# --------
+# Violin plot: Glucose by age category
+# --------
+
+glucose_age_violin <- ggplot(
+  pregnancies_bmi_age,
+  aes(x = age_cat, y = Glucose, fill = age_cat)
+) +
+  geom_violin(
+    trim = FALSE,
+    alpha = 0.85,
+    na.rm = TRUE
+  ) +
+  geom_boxplot(
+    width = 0.12,
+    fill = "white",
+    alpha = 0.8,
+    outlier.shape = NA,
+    na.rm = TRUE
+  ) +
+  scale_fill_manual(
+    values = age_colours,
+    guide = "none"
+  ) +
+  labs(
+    title = "Glucose Level by Age Category",
+    x = "Age category",
+    y = "Glucose level"
+  ) +
+  theme_classic(base_size = 13) +
+  theme(
+    plot.title = element_text(
+      face = "bold",
+      size = 16
+    ),
+    axis.text.x = element_text(
+      size = 12
+    )
+  )
+
+print(glucose_age_violin)
+
+
+
+
 
 
 #----------------------
-# Mutually adjusted logistic regression
+#Linear Regresion Model - Glucose
+#----------------------
+# ----------------------
+# Create new cleaned dataset from original data - bring back insulin and skinthickness
+# ----------------------
+
+# Start again from the original dataset
+df_lm <- akshaydattatraykhare_diabetes_dataset
+
+# Variables where 0 will be treated as a missing value
+# Pregnancies and Outcome are deliberately excluded
+zero_to_na <- c(
+  "Glucose",
+  "BloodPressure",
+  "SkinThickness",
+  "Insulin",
+  "BMI",
+  "DiabetesPedigreeFunction",
+  "Age"
+)
+
+# Replace 0 with NA in these variables only
+df_lm[zero_to_na] <- lapply(
+  df_lm[zero_to_na],
+  function(x) {
+    x[x == 0] <- NA
+    x
+  }
+)
+
+# Check the number of missing values in each variable
+colSums(is.na(df_lm))
+
+# View structure of new dataset
+str(df_lm)
+
+
+# ----------------------
+# Multiple linear regression predicting Glucose
+# ----------------------
+
+glucose_predictors <- c(
+  "Age",
+  "BMI",
+  "Pregnancies",
+  "BloodPressure",
+  "SkinThickness",
+  "Insulin",
+  "DiabetesPedigreeFunction"
+)
+
+# Select only variables required for the regression
+glucose_data <- df_lm[
+  ,
+  c("Glucose", glucose_predictors),
+  drop = FALSE
+]
+
+# Show missing values before removing incomplete records
+cat("Missing values before complete-case selection:\n")
+print(colSums(is.na(glucose_data)))
+
+# ----------------------
+# Handle missing values!!!!
+# ----------------------
+
+#large amount of data lost - 376 - nearly 50%!
+
+
+# Multiple linear regression requires observations to have
+# values for the outcome AND every predictor in the model.
+# Therefore, retain complete records for this analysis.
+glucose_complete <- glucose_data[
+  complete.cases(glucose_data),
+  ,
+  drop = FALSE
+]
+
+cat(
+  "\nOriginal records: ", nrow(glucose_data),
+  "\nComplete records used in regression: ", nrow(glucose_complete),
+  "\nRecords excluded because of missing values: ",
+  nrow(glucose_data) - nrow(glucose_complete),
+  "\n",
+  sep = ""
+)
+
+
+
+# ----------------------
+# Fit multiple linear regression
+# ----------------------
+
+glucose_model <- lm(
+  Glucose ~
+    Age +
+    BMI +
+    Pregnancies +
+    BloodPressure +
+    SkinThickness +
+    Insulin +
+    DiabetesPedigreeFunction,
+  data = glucose_complete
+)
+
+# Model results
+summary(glucose_model)
+coef(summary(glucose_model))
+
+
+#make a nice plot
+# Show all four regression diagnostic plots on one sheet
+par(mfrow = c(2, 2))
+
+plot(glucose_model)
+
+# Reset plotting layout afterwards
+par(mfrow = c(1, 1))
+
+
+
+#diagnostics of model
+diagnostics <- data.frame(
+  Observation = 1:nrow(glucose_complete),
+  StandardizedResidual = rstandard(glucose_model),
+  Leverage = hatvalues(glucose_model),
+  CooksDistance = cooks.distance(glucose_model)
+)
+
+diagnostics[
+  order(diagnostics$CooksDistance, decreasing = TRUE),
+][1:10, ]
+
+
+#test removal of sensative data
+# ----------------------
+# Sensitivity analysis for influential observations
+# ----------------------
+
+# Cook's distance for every observation used in the model
+cooks_d <- cooks.distance(glucose_model)
+
+# Identify the 3 observations with the largest Cook's distances
+top_influential <- order(
+  cooks_d,
+  decreasing = TRUE
+)[1:3]
+
+# Show which rows they are
+top_influential
+
+# Show their diagnostic values
+diagnostics <- data.frame(
+  Observation = 1:nrow(glucose_complete),
+  StandardizedResidual = rstandard(glucose_model),
+  Leverage = hatvalues(glucose_model),
+  CooksDistance = cooks_d
+)
+
+diagnostics[top_influential, ]
+
+# ----------------------
+# Create sensitivity dataset
+# ----------------------
+
+# Remove only the 3 most influential observations
+# from a COPY of the complete-case dataset
+glucose_sensitivity <- glucose_complete[
+  -top_influential,
+  ,
+  drop = FALSE
+]
+
+# ----------------------
+# Fit sensitivity model
+# ----------------------
+
+glucose_model_sensitivity <- lm(
+  Glucose ~
+    Age +
+    BMI +
+    Pregnancies +
+    BloodPressure +
+    SkinThickness +
+    Insulin +
+    DiabetesPedigreeFunction,
+  data = glucose_sensitivity
+)
+
+# ----------------------
+# Compare model summaries
+# ----------------------
+
+cat("\n--- ORIGINAL MODEL ---\n")
+print(summary(glucose_model))
+
+cat("\n--- SENSITIVITY MODEL ---\n")
+print(summary(glucose_model_sensitivity))
+
+# ----------------------
+# Compare coefficients
+# ----------------------
+
+original_coefficients <- coef(summary(glucose_model))
+sensitivity_coefficients <- coef(summary(glucose_model_sensitivity))
+
+coefficient_comparison <- data.frame(
+  Predictor = rownames(original_coefficients),
+  Original_Estimate = original_coefficients[, "Estimate"],
+  Original_p = original_coefficients[, "Pr(>|t|)"],
+  Sensitivity_Estimate = sensitivity_coefficients[, "Estimate"],
+  Sensitivity_p = sensitivity_coefficients[, "Pr(>|t|)"]
+)
+
+print(coefficient_comparison)
+
+# ----------------------
+# Compare R-squared values
+# ----------------------
+
+model_comparison <- data.frame(
+  Model = c("Original", "Sensitivity"),
+  N = c(
+    nobs(glucose_model),
+    nobs(glucose_model_sensitivity)
+  ),
+  R_squared = c(
+    summary(glucose_model)$r.squared,
+    summary(glucose_model_sensitivity)$r.squared
+  ),
+  Adjusted_R_squared = c(
+    summary(glucose_model)$adj.r.squared,
+    summary(glucose_model_sensitivity)$adj.r.squared
+  ),
+  Residual_SE = c(
+    sigma(glucose_model),
+    sigma(glucose_model_sensitivity)
+  )
+)
+
+print(model_comparison)
+
+
+
+
+
+#----------------------
+# Mutually adjusted logistic regression - Output
 #----------------------
 # This model estimates the association of each retained predictor with the
 # diabetes outcome while holding all of the other retained predictors constant.
@@ -1388,6 +1784,432 @@ adjusted_effects_plot <- ggplot(
   theme_minimal()
 
 print(adjusted_effects_plot)
+
+
+
+
+#-----
+#linear regression model (AKA BAG)
+#glucose BMI Age only
+#-----
+
+# Predictors for this model only
+bag_predictors <- c(
+  "BMI",
+  "Age",
+  "Glucose"
+)
+
+# Create a separate analysis dataset
+bag_data <- df[, c("Outcome", bag_predictors), drop = FALSE]
+
+# Keep complete cases only
+bag_data <- bag_data[
+  complete.cases(bag_data),
+  ,
+  drop = FALSE
+]
+
+# Ensure Outcome is coded as 0 / 1
+bag_data$Outcome <- as.integer(
+  as.character(bag_data$Outcome)
+)
+
+# Check Outcome is binary
+if (
+  !all(bag_data$Outcome %in% c(0L, 1L)) ||
+  !all(c(0L, 1L) %in% bag_data$Outcome)
+) {
+  stop(
+    "Outcome must be coded as 0 (no diabetes) or 1 (diabetes)."
+  )
+}
+
+# Fit logistic regression model
+bag_model <- glm(
+  Outcome ~ BMI + Age + Glucose,
+  data = bag_data,
+  family = binomial
+)
+
+# Print model summary
+print(summary(bag_model))
+
+
+#----------------------
+# Adjusted odds ratios
+#----------------------
+
+bag_predictor_labels <- c(
+  BMI = "BMI",
+  Age = "Age",
+  Glucose = "Glucose"
+)
+
+bag_effects <- broom::tidy(
+  bag_model,
+  conf.int = TRUE,
+  exponentiate = TRUE
+) %>%
+  dplyr::filter(
+    term != "(Intercept)"
+  ) %>%
+  dplyr::mutate(
+    Predictor = unname(
+      bag_predictor_labels[term]
+    )
+  )
+
+bag_effects_table <- bag_effects %>%
+  dplyr::transmute(
+    Predictor,
+    `Adjusted OR` = round(
+      estimate,
+      2
+    ),
+    `95% CI` = paste0(
+      round(conf.low, 2),
+      " to ",
+      round(conf.high, 2)
+    ),
+    `p value` = format.pval(
+      p.value,
+      digits = 3,
+      eps = 0.001
+    )
+  )
+
+cat(
+  "BMI, Age and Glucose logistic regression: ",
+  nrow(bag_data),
+  " complete records (",
+  sum(bag_data$Outcome == 1),
+  " with diabetes).\n",
+  sep = ""
+)
+
+cat(
+  "Each odds ratio is adjusted for the other predictors in the model.\n"
+)
+
+print(
+  bag_effects_table,
+  n = Inf
+)
+
+
+#----------------------
+# Violin plot data
+#----------------------
+
+bag_violin_data <- bag_data %>%
+  dplyr::mutate(
+    Outcome_label = factor(
+      Outcome,
+      levels = c(0, 1),
+      labels = c(
+        "No diabetes",
+        "Diabetes"
+      )
+    )
+  ) %>%
+  tidyr::pivot_longer(
+    cols = c(
+      BMI,
+      Age,
+      Glucose
+    ),
+    names_to = "Predictor",
+    values_to = "Value"
+  )
+
+# Keep predictor order consistent
+bag_violin_data$Predictor <- factor(
+  bag_violin_data$Predictor,
+  levels = c(
+    "BMI",
+    "Age",
+    "Glucose"
+  )
+)
+
+
+#----------------------
+# Matching teal colours
+#----------------------
+
+outcome_colours <- c(
+  "No diabetes" = "#66D9CC",
+  "Diabetes"    = "#008C95"
+)
+
+
+#----------------------
+# Violin plot
+#----------------------
+
+bag_violin_plot <- ggplot(
+  bag_violin_data,
+  aes(
+    x = Outcome_label,
+    y = Value,
+    fill = Outcome_label
+  )
+) +
+  geom_violin(
+    trim = FALSE,
+    alpha = 0.7
+  ) +
+  geom_boxplot(
+    width = 0.15,
+    outlier.shape = NA,
+    alpha = 0.7
+  ) +
+  facet_wrap(
+    ~ Predictor,
+    scales = "free_y"
+  ) +
+  scale_fill_manual(
+    values = outcome_colours
+  ) +
+  labs(
+    title = "Distribution of BMI, Age and Glucose by Diabetes Outcome",
+    x = "Diabetes outcome",
+    y = "Value",
+    fill = "Outcome",
+    caption = paste0(
+      "Complete-case analysis: n = ",
+      nrow(bag_data)
+    )
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "none"
+  )
+
+print(
+  bag_violin_plot
+)
+
+#----plot to review
+#----------------------
+# Logistic regression diagnostics
+#----------------------
+
+# Diagnostic values
+bag_diag_data <- data.frame(
+  Fitted = fitted(bag_model),
+  DevianceResidual = residuals(bag_model, type = "deviance"),
+  PearsonResidual = residuals(bag_model, type = "pearson"),
+  Leverage = hatvalues(bag_model),
+  CooksDistance = cooks.distance(bag_model)
+)
+
+#----------------------
+# Residuals vs fitted
+#----------------------
+
+bag_residual_plot <- ggplot(
+  bag_diag_data,
+  aes(
+    x = Fitted,
+    y = DevianceResidual
+  )
+) +
+  geom_point(
+    alpha = 0.5
+  ) +
+  geom_smooth(
+    method = "loess",
+    se = FALSE
+  ) +
+  geom_hline(
+    yintercept = 0,
+    linetype = "dashed"
+  ) +
+  labs(
+    title = "Residuals vs Fitted",
+    x = "Predicted probability",
+    y = "Deviance residual"
+  ) +
+  theme_minimal()
+
+print(bag_residual_plot)
+
+
+#----------------------
+# Cook's distance
+#----------------------
+
+#----------------------
+# Predicted probabilities
+#----------------------
+
+bag_predicted_prob <- predict(
+  bag_model,
+  type = "response"
+)
+
+
+#----------------------
+# Classification using 0.50 threshold
+#----------------------
+
+bag_predicted_class <- ifelse(
+  bag_predicted_prob >= 0.50,
+  1,
+  0
+)
+
+
+#----------------------
+# Confusion matrix
+#----------------------
+
+bag_confusion_matrix <- table(
+  Predicted = bag_predicted_class,
+  Actual = bag_data$Outcome
+)
+
+print(bag_confusion_matrix)
+
+
+#----------------------
+# Classification metrics
+#----------------------
+
+bag_TN <- bag_confusion_matrix["0", "0"]
+bag_FN <- bag_confusion_matrix["0", "1"]
+bag_FP <- bag_confusion_matrix["1", "0"]
+bag_TP <- bag_confusion_matrix["1", "1"]
+
+bag_accuracy <- (
+  bag_TP + bag_TN
+) / sum(bag_confusion_matrix)
+
+bag_sensitivity <- bag_TP / (
+  bag_TP + bag_FN
+)
+
+bag_specificity <- bag_TN / (
+  bag_TN + bag_FP
+)
+
+
+#----------------------
+# Hosmer-Lemeshow test and Classification accuracy, sensitivity, and specificity.
+#----------------------
+
+bag_classification_results <- data.frame(
+  Metric = c(
+    "Accuracy",
+    "Sensitivity",
+    "Specificity"
+  ),
+  Value = round(
+    c(
+      bag_accuracy,
+      bag_sensitivity,
+      bag_specificity
+    ),
+    3
+  ),
+  Percentage = paste0(
+    round(
+      c(
+        bag_accuracy,
+        bag_sensitivity,
+        bag_specificity
+      ) * 100,
+      1
+    ),
+    "%"
+  )
+)
+
+print(
+  bag_classification_results,
+  row.names = FALSE
+)
+
+
+
+#----------------------
+# Interaction effect: BMI x Age
+# Likelihood ratio test
+#----------------------
+
+# Use the same complete-case dataset
+# but create new model objects
+
+bag_main_effects_model <- glm(
+  Outcome ~ BMI + Age + Glucose,
+  data = bag_data,
+  family = binomial
+)
+
+bag_interaction_model <- glm(
+  Outcome ~ BMI * Age + Glucose,
+  data = bag_data,
+  family = binomial
+)
+
+
+#----------------------
+# Likelihood ratio test
+#----------------------
+
+bag_interaction_lrt <- anova(
+  bag_main_effects_model,
+  bag_interaction_model,
+  test = "LRT"
+)
+
+print(bag_interaction_lrt)
+
+
+#----------------------
+# Interaction model summary
+#----------------------
+
+print(summary(bag_interaction_model))
+
+
+#----------------------
+# Odds ratios for interaction model
+#----------------------
+
+bag_interaction_effects <- broom::tidy(
+  bag_interaction_model,
+  conf.int = TRUE,
+  exponentiate = TRUE
+)
+
+bag_interaction_effects_table <- bag_interaction_effects %>%
+  dplyr::filter(term != "(Intercept)") %>%
+  dplyr::transmute(
+    Term = term,
+    `Odds ratio` = round(estimate, 3),
+    `95% CI` = paste0(
+      round(conf.low, 3),
+      " to ",
+      round(conf.high, 3)
+    ),
+    `p value` = format.pval(
+      p.value,
+      digits = 3,
+      eps = 0.001
+    )
+  )
+
+print(
+  bag_interaction_effects_table,
+  n = Inf
+)
+
+
+
+
 
 #----------------------
 #decision tree and plot
