@@ -2208,6 +2208,367 @@ print(
 )
 
 
+#----------------------
+# Comparison of logistic regression models including Pregnancies
+# Model 1: BMI + Age + Glucose + Pregnancies
+# Model 2: Model 1 + BMI x Age interaction
+#----------------------
+
+# The existing BAG interaction models above do not include Pregnancies.
+# Use one complete-case dataset so both models are fitted to the same records.
+bmi_age_preg_comparison_predictors <- c(
+  "BMI",
+  "Age",
+  "Glucose",
+  "Pregnancies"
+)
+
+bmi_age_preg_comparison_data <- df[
+  ,
+  c("Outcome", bmi_age_preg_comparison_predictors),
+  drop = FALSE
+]
+
+bmi_age_preg_comparison_data <- bmi_age_preg_comparison_data[
+  complete.cases(bmi_age_preg_comparison_data),
+  ,
+  drop = FALSE
+]
+
+bmi_age_preg_comparison_data$Outcome <- as.integer(
+  as.character(bmi_age_preg_comparison_data$Outcome)
+)
+
+if (
+  !all(bmi_age_preg_comparison_data$Outcome %in% c(0L, 1L)) ||
+    !all(c(0L, 1L) %in% bmi_age_preg_comparison_data$Outcome)
+) {
+  stop("Outcome must be coded as 0 (no diabetes) or 1 (diabetes).")
+}
+
+# Model 1: main effects only
+bmi_age_preg_main_effects_model <- glm(
+  Outcome ~ BMI + Age + Glucose + Pregnancies,
+  data = bmi_age_preg_comparison_data,
+  family = binomial
+)
+
+# Model 2: Model 1 plus the BMI x Age interaction
+bmi_age_preg_interaction_model <- update(
+  bmi_age_preg_main_effects_model,
+  . ~ . + BMI:Age
+)
+
+print(summary(bmi_age_preg_main_effects_model))
+print(summary(bmi_age_preg_interaction_model))
+
+# Likelihood-ratio test for whether adding the BMI x Age interaction improves fit.
+bmi_age_preg_interaction_lrt <- anova(
+  bmi_age_preg_main_effects_model,
+  bmi_age_preg_interaction_model,
+  test = "LRT"
+)
+
+print(bmi_age_preg_interaction_lrt)
+
+# Smaller AIC and BIC values indicate better fit after accounting for model size.
+bmi_age_preg_model_comparison <- data.frame(
+  Model = c(
+    "Model 1: main effects",
+    "Model 2: main effects + BMI x Age"
+  ),
+  N = c(
+    nobs(bmi_age_preg_main_effects_model),
+    nobs(bmi_age_preg_interaction_model)
+  ),
+  `Residual deviance` = round(
+    c(
+      deviance(bmi_age_preg_main_effects_model),
+      deviance(bmi_age_preg_interaction_model)
+    ),
+    2
+  ),
+  AIC = round(
+    c(
+      AIC(bmi_age_preg_main_effects_model),
+      AIC(bmi_age_preg_interaction_model)
+    ),
+    2
+  ),
+  BIC = round(
+    c(
+      BIC(bmi_age_preg_main_effects_model),
+      BIC(bmi_age_preg_interaction_model)
+    ),
+    2
+  ),
+  check.names = FALSE
+)
+
+print(bmi_age_preg_model_comparison, row.names = FALSE)
+
+# Predicted probabilities from Model 2 illustrate the BMI x Age interaction.
+# Use the same age categories and colours as the earlier age-category plots.
+# The model treats Age continuously, so each curve uses its category's median age.
+bmi_age_preg_age_labels <- c(
+  "Under 30",
+  "30–39",
+  "40–49",
+  "50+"
+)
+
+bmi_age_preg_age_reference <- data.frame(
+  Age = bmi_age_preg_comparison_data$Age,
+  Age_group = ordered(
+    cut(
+      bmi_age_preg_comparison_data$Age,
+      breaks = c(-Inf, 30, 40, 50, Inf),
+      labels = bmi_age_preg_age_labels,
+      right = FALSE
+    ),
+    levels = bmi_age_preg_age_labels
+  )
+) %>%
+  dplyr::group_by(Age_group) %>%
+  dplyr::summarise(
+    Age = median(Age),
+    .groups = "drop"
+  )
+
+bmi_age_preg_bmi_values <- seq(
+  min(bmi_age_preg_comparison_data$BMI),
+  max(bmi_age_preg_comparison_data$BMI),
+  length.out = 100
+)
+
+bmi_age_preg_reference_glucose <- median(
+  bmi_age_preg_comparison_data$Glucose,
+  na.rm = TRUE
+)
+
+bmi_age_preg_reference_pregnancies <- median(
+  bmi_age_preg_comparison_data$Pregnancies,
+  na.rm = TRUE
+)
+
+bmi_age_preg_prediction_data <- do.call(
+  rbind,
+  lapply(seq_len(nrow(bmi_age_preg_age_reference)), function(i) {
+    data.frame(
+      BMI = bmi_age_preg_bmi_values,
+      Age = bmi_age_preg_age_reference$Age[i],
+      Glucose = bmi_age_preg_reference_glucose,
+      Pregnancies = bmi_age_preg_reference_pregnancies,
+      Age_group = as.character(bmi_age_preg_age_reference$Age_group[i])
+    )
+  })
+)
+
+bmi_age_preg_prediction_data$Age_group <- ordered(
+  bmi_age_preg_prediction_data$Age_group,
+  levels = bmi_age_preg_age_labels
+)
+
+bmi_age_preg_prediction_data$Predicted_probability <- predict(
+  bmi_age_preg_interaction_model,
+  newdata = bmi_age_preg_prediction_data,
+  type = "response"
+)
+
+bmi_age_preg_interaction_plot <- ggplot(
+  bmi_age_preg_prediction_data,
+  aes(
+    x = BMI,
+    y = Predicted_probability,
+    colour = Age_group
+  )
+  ) +
+  geom_line(linewidth = 1) +
+  scale_colour_manual(
+    values = age_colours,
+    drop = FALSE
+  ) +
+  scale_y_continuous(
+    labels = scales::percent_format(accuracy = 1),
+    limits = c(0, 1)
+  ) +
+  labs(
+    title = "Predicted Diabetes Probability by BMI and Age",
+    subtitle = "Model 2: BMI x Age interaction; category-specific median ages",
+    x = "BMI",
+    y = "Predicted probability of diabetes",
+    colour = "Age category",
+    caption = paste0(
+      "Glucose and Pregnancies held at their medians; Age is continuous in the model; n = ",
+      nrow(bmi_age_preg_comparison_data)
+    )
+  ) +
+  theme_classic(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", size = 16),
+    legend.position = "top"
+  )
+
+print(bmi_age_preg_interaction_plot)
+
+
+# Compare model classification performance with stratified 10-fold validation.
+# Each prediction is made for a held-out record, rather than the fitting record.
+bmi_age_preg_model_labels <- c(
+  "main effects",
+  "main effects + BMI x Age"
+)
+
+bmi_age_preg_cv_folds <- 10L
+set.seed(123)
+
+bmi_age_preg_fold_id <- integer(nrow(bmi_age_preg_comparison_data))
+
+for (outcome_value in c(0L, 1L)) {
+  outcome_rows <- which(
+    bmi_age_preg_comparison_data$Outcome == outcome_value
+  )
+
+  bmi_age_preg_fold_id[outcome_rows] <- sample(
+    rep(
+      seq_len(bmi_age_preg_cv_folds),
+      length.out = length(outcome_rows)
+    )
+  )
+}
+
+bmi_age_preg_cv_prediction_list <- vector(
+  "list",
+  bmi_age_preg_cv_folds
+)
+
+for (fold in seq_len(bmi_age_preg_cv_folds)) {
+  bmi_age_preg_training_data <- bmi_age_preg_comparison_data[
+    bmi_age_preg_fold_id != fold,
+    ,
+    drop = FALSE
+  ]
+
+  bmi_age_preg_testing_data <- bmi_age_preg_comparison_data[
+    bmi_age_preg_fold_id == fold,
+    ,
+    drop = FALSE
+  ]
+
+  bmi_age_preg_cv_main_effects_model <- glm(
+    formula(bmi_age_preg_main_effects_model),
+    data = bmi_age_preg_training_data,
+    family = binomial
+  )
+
+  bmi_age_preg_cv_interaction_model <- update(
+    bmi_age_preg_cv_main_effects_model,
+    . ~ . + BMI:Age
+  )
+
+  bmi_age_preg_cv_prediction_list[[fold]] <- dplyr::bind_rows(
+    data.frame(
+      Model = bmi_age_preg_model_labels[1],
+      Actual = bmi_age_preg_testing_data$Outcome,
+      Predicted_probability = predict(
+        bmi_age_preg_cv_main_effects_model,
+        newdata = bmi_age_preg_testing_data,
+        type = "response"
+      )
+    ),
+    data.frame(
+      Model = bmi_age_preg_model_labels[2],
+      Actual = bmi_age_preg_testing_data$Outcome,
+      Predicted_probability = predict(
+        bmi_age_preg_cv_interaction_model,
+        newdata = bmi_age_preg_testing_data,
+        type = "response"
+      )
+    )
+  )
+}
+
+bmi_age_preg_cv_predictions <- do.call(
+  rbind,
+  bmi_age_preg_cv_prediction_list
+) %>%
+  dplyr::mutate(
+    Model = factor(Model, levels = bmi_age_preg_model_labels),
+    Predicted_class = ifelse(Predicted_probability >= 0.50, 1L, 0L)
+  )
+
+bmi_age_preg_cv_performance <- bmi_age_preg_cv_predictions %>%
+  dplyr::group_by(Model) %>%
+  dplyr::summarise(
+    Accuracy = round(mean(Predicted_class == Actual), 3),
+    Sensitivity = round(
+      mean(Predicted_class[Actual == 1] == 1),
+      3
+    ),
+    Specificity = round(
+      mean(Predicted_class[Actual == 0] == 0),
+      3
+    ),
+    `Brier score` = round(
+      mean((Actual - Predicted_probability)^2),
+      3
+    ),
+    .groups = "drop"
+  )
+
+print(bmi_age_preg_cv_performance, row.names = FALSE)
+
+bmi_age_preg_cv_performance_plot_data <- bmi_age_preg_cv_performance %>%
+  tidyr::pivot_longer(
+    cols = c(Accuracy, Sensitivity, Specificity),
+    names_to = "Metric",
+    values_to = "Value"
+  )
+
+bmi_age_preg_cv_performance_plot <- ggplot(
+  bmi_age_preg_cv_performance_plot_data,
+  aes(
+    x = Metric,
+    y = Value,
+    fill = Model
+  )
+) +
+  geom_col(
+    position = position_dodge(width = 0.75),
+    width = 0.65
+  ) +
+  geom_text(
+    aes(label = scales::percent(Value, accuracy = 0.1)),
+    position = position_dodge(width = 0.75),
+    vjust = -0.35,
+    size = 3.8
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Model 1: main effects" = "#66D9CC",
+      "Model 2: main effects + BMI x Age" = "#008C95"
+    )
+  ) +
+  scale_y_continuous(
+    labels = scales::percent_format(accuracy = 1),
+    limits = c(0, 1.05),
+    expand = expansion(mult = c(0, 0.02))
+  ) +
+  labs(
+    title = "10-Fold Cross-Validated Classification Performance",
+    x = NULL,
+    y = "Performance",
+    fill = "Model",
+  ) +
+  theme_classic(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", size = 16),
+    legend.position = "top"
+  )
+
+print(bmi_age_preg_cv_performance_plot)
+
+
 
 
 
