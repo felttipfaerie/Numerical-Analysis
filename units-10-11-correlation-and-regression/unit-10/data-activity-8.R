@@ -1,8 +1,8 @@
 # Coding-assistant note: OpenAI Codex assisted with coding. The project owner made the key decisions on how to segment and manage the data.
-# Dataset note: Uses the Sample Superstore sales training data at unit-8/seminar/train.csv in this repository. A public compatible download is available at https://www.kaggle.com/datasets/vivek468/superstore-dataset-final
+# Dataset note: Uses the Sample Superstore sales training data at units-6-8-seminars-and-visualisation/unit-8/seminar/train.csv in this repository. A public compatible download is available at https://www.kaggle.com/datasets/vivek468/superstore-dataset-final
 
 library(haven)
-Health_Data <- read_sav("~/GitHub/Numerical Analysis/unit-8/Health Data.sav")
+Health_Data <- read_sav("~/GitHub/Numerical Analysis/units-6-8-seminars-and-visualisation/unit-8/Health Data.sav")
 
 df <- Health_Data
 

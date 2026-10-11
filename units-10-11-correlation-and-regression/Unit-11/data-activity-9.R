@@ -1,5 +1,5 @@
 library(haven)
-Health_Data <- read_sav("~/GitHub/Numerical Analysis/unit-8/Health Data.sav")
+Health_Data <- read_sav("~/GitHub/Numerical Analysis/units-6-8-seminars-and-visualisation/unit-8/Health Data.sav")
 
 df <- Health_Data
 
