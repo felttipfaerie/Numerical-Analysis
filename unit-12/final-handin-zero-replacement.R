@@ -1,10 +1,10 @@
-#The following code was created for the end of module assement for the Numerical Analysis July 2026 Statistical Analysis Presentation
-#the dataset was provided for the presentation
-#ChatGPT was used as a coding agent and to check for errors and inconsistencies in the final code, results and output.
-#Any borrowed or adapted code snippet are indicated if and where applicable
+# The following code was created for the end of module assement for the Numerical Analysis July 2026 Statistical Analysis Presentation
+# the dataset was provided for the presentation
+# ChatGPT was used as a coding agent and to check for errors and inconsistencies.
+# Any borrowed or adapted code snippet are indicated if and where applicable
 # All prompts were written by Eleanor-Rose
 # And all code was reviewed and edited by Eleanor-Rose and the conclusions from the data reached are her own
-
+# All code and additional plots can be found Barfield, E.-R. (2026) Statistical Analysis Presentation: Numerical Analysis. Available at: https://github.com/felttipfaerie/Numerical-Analysis/tree/main/unit-12 (Accessed: 12 October 2026).
 
 library(GGally)
 library(readr)
