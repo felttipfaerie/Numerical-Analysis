@@ -17,6 +17,7 @@ library(broom)
 library(dplyr)
 library(scales)
 library(rcompanion)
+library(rpart.plot)
 
 # -----------------------------------------------------------------------------
 # PLOT STYLE AND EXPORT SETTINGS
@@ -2838,40 +2839,131 @@ save_ggplot(bmi_age_preg_cv_performance_plot, "25_ten_fold_cv_performance")
 #decision tree and plot
 #----------------------
 # Decision tree
-# Keep the decision-tree training sample separate from the categorical analysis.
+
+# Use the exact completed records and input columns used by the preceding
+# BMI, age, glucose, and pregnancies regression.
+tree_data <- bmi_age_preg_comparison_data
+tree_data$Outcome <- factor(tree_data$Outcome, levels = c(0, 1))
+tree_formula <- stats::formula(bmi_age_preg_main_effects_model)
+
+if (nrow(tree_data) != stats::nobs(bmi_age_preg_main_effects_model)) {
+  stop("The decision tree and the regression must use the same number of records.")
+}
+
+# This is the tree shown below.  It uses every record used by the regression.
+tree_model <- rpart::rpart(
+  formula = tree_formula,
+  data = tree_data,
+  method = "class"
+)
+
 set.seed(123)
 tree_index <- sample(
-  seq_len(nrow(df)),
-  size = floor(0.7 * nrow(df))
+  seq_len(nrow(tree_data)),
+  size = floor(0.7 * nrow(tree_data))
 )
-tree_training_data <- df[tree_index, , drop = FALSE]
 
-tree_model <- rpart(
-  Outcome ~ .,
+tree_training_data <- tree_data[tree_index, , drop = FALSE]
+tree_test_data <- tree_data[-tree_index, , drop = FALSE]
+
+# Use a separate temporary tree for the performance check.  Both parts of the
+# split still come from the same records as the regression.
+tree_evaluation_model <- rpart::rpart(
+  formula = tree_formula,
   data = tree_training_data,
   method = "class"
 )
 
-# Nice tree plot
-save_base_plot("26_decision_tree", width = 12, height = 9, {
-  base_plot_par(oma = c(2.4, 0, 0, 0))
-  rpart.plot(
-    tree_model,
-    type = 4,
-    extra = 104,
-    fallen.leaves = TRUE,
-    box.palette = plot_style$tree_palette,
-    #zero-value replacement change
-    main = "Decision Tree",
-    tweak = 1.1
-  )
-  mtext(
-    adjustment_caption,
-    side = 1,
-    outer = TRUE,
-    line = 0.5,
-    cex = 0.7,
-    col = plot_colours$neutral
-  )
-})
+# Predicted classes
+tree_predictions <- predict(
+  tree_evaluation_model,
+  newdata = tree_test_data,
+  type = "class"
+)
 
+#confusion matrix
+# Confusion matrix
+tree_confusion_matrix <- table(
+  Actual = tree_test_data$Outcome,
+  Predicted = tree_predictions
+)
+
+print(tree_confusion_matrix)
+
+
+#----------------------
+# Classification performance
+#----------------------
+
+# Assumes Outcome levels are 0 and 1
+
+TN <- tree_confusion_matrix["0", "0"]
+FP <- tree_confusion_matrix["0", "1"]
+FN <- tree_confusion_matrix["1", "0"]
+TP <- tree_confusion_matrix["1", "1"]
+
+tree_accuracy <- (TP + TN) / sum(tree_confusion_matrix)
+
+tree_sensitivity <- TP / (TP + FN)
+
+tree_specificity <- TN / (TN + FP)
+
+tree_performance <- data.frame(
+  Metric = c(
+    "Accuracy",
+    "Sensitivity",
+    "Specificity"
+  ),
+  Percent = c(
+    tree_accuracy,
+    tree_sensitivity,
+    tree_specificity
+  )
+)
+
+tree_performance$Percent <- scales::percent(
+  tree_performance$Percent,
+  accuracy = 0.1
+)
+
+print(tree_performance)
+
+# Nice tree plot 
+# code adapted from Source: Bader and Leuzinger (2024, Chapter 8)
+
+save_base_plot(
+  "26_decision_tree",
+  width = 16,
+  height = 12,
+  {
+    par(
+      mfrow = c(1, 1),
+      fig = c(0, 1, 0, 1),
+      oma = c(2.4, 0, 0, 0)
+    )
+    
+    rpart.plot(
+      tree_model,
+      type = 4,
+      extra = 104,
+      fallen.leaves = TRUE,
+      box.palette = plot_style$tree_palette,
+      main = "Decision Tree",
+      
+      tweak = 1.35,
+      branch = 1,          # keep 90-degree branches
+      compress = FALSE,
+      varlen = 12,
+      faclen = 10
+    )
+    
+    mtext(
+      adjustment_caption,
+      side = 1,
+      outer = TRUE,
+      line = 0.5,
+      cex = 0.7,
+      col = plot_colours$neutral
+    )
+  }
+)
